@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - TestFlow{% endblock %}
+
+{% block content %}
+<div class="space-y-8 max-w-7xl mx-auto">
+    <!-- Tiêu đề chào buổi sáng -->
+    <div>
+        <h1 class="text-3xl font-bold text-slate-900 tracking-tight">Good morning, {{ request.user.username }}!</h1>
+        <p class="text-sm text-slate-500 mt-1">Here's what's happening with your projects today.</p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Card 1: Total Projects -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Projects</p>
+                <h3 class="text-3xl font-extrabold text-slate-900 mt-2">4</h3>
+            </div>
+            <div class="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl shadow-lg shadow-indigo-600/30">
+                <i class="fa-solid fa-folder-open"></i>
+            </div>
+        </div>
+
+        <!-- Card 2: Requirements -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Requirements</p>
+                <h3 class="text-3xl font-extrabold text-slate-900 mt-2">5</h3>
+            </div>
+            <div class="w-14 h-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl shadow-lg shadow-blue-600/30">
+                <i class="fa-solid fa-file-lines"></i>
+            </div>
+        </div>
+
+        <!-- Card 3: Test Cases -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Test Cases</p>
+                <h3 class="text-3xl font-extrabold text-slate-900 mt-2">6</h3>
+            </div>
+            <div class="w-14 h-14 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-xl shadow-lg shadow-emerald-500/30">
+                <i class="fa-solid fa-vials"></i>
+            </div>
+        </div>
+
+        <!-- Card 4: Open Bugs -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Open Bugs</p>
+                <h3 class="text-3xl font-extrabold text-slate-900 mt-2">3</h3>
+            </div>
+            <div class="w-14 h-14 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-xl shadow-lg shadow-rose-500/30">
+                <i class="fa-solid fa-bug"></i>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
