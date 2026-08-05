@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+from datetime import timedelta
 from pathlib import Path
 import os
 
@@ -29,7 +30,7 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 
 
-# Application definition
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -38,9 +39,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
 
     # Third-party
-    'django_htmx', # Thư viện hỗ trợ HTMX cho Django
+    'django_htmx', 
 
     # Domain Apps
     'apps.core',
@@ -61,8 +64,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django_htmx.middleware.HtmxMiddleware', # Middleware bắt request HTMX
-    'apps.tenants.middleware.TenantMiddleware', # Custom Tenant Context Middleware
+    'django_htmx.middleware.HtmxMiddleware', 
+    'apps.tenants.middleware.TenantMiddleware', 
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -70,7 +73,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'], # Thư mục templates dùng chung ở root
+        'DIRS': [BASE_DIR / 'templates'], 
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -149,6 +152,18 @@ LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/testcases/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
 
 # Cấu hình AI Provider (Mặc định dùng stub cho môi trường Dev)
 AI_PROVIDER = os.environ.get('AI_PROVIDER', 'stub')
