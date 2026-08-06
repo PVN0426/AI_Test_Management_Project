@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - AI Test Management Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-5xl bg-white border border-slate-200 rounded-3xl shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-2">
+        <div class="relative hidden lg:flex flex-col justify-between p-12 bg-gradient-to-br from-indigo-50 via-slate-50 to-blue-50 text-slate-800 overflow-hidden border-r border-slate-100">
+            <div class="absolute -top-24 -left-24 w-96 h-96 bg-indigo-200/50 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-200/50 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="relative z-10 flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-600/30">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <span class="text-xl font-bold tracking-wide text-slate-900">TestFlow AI</span>
+            </div>
+
+            <!-- Middle Intro Content -->
+            <div class="relative z-10 my-auto space-y-4">
+                <span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold tracking-wider uppercase">
+                    Next-Gen QA Platform
+                </span>
+                <h1 class="text-4xl font-extrabold tracking-tight leading-tight text-slate-900">
+                    Smart & Optimized <br><span class="text-indigo-600">Test Management</span>
+                </h1>
+                <p class="text-slate-600 text-sm leading-relaxed">
+                    A comprehensive platform helping your team seamlessly manage requirements, test cases, and automated bug tracking.
+                </p>
+            </div>
+
+            <!-- Footer -->
+            <div class="relative z-10 text-xs text-slate-400">
+                &copy; 2026 TestFlow Platform. All rights reserved.
+            </div>
+        </div>
+
+        <div class="flex flex-col justify-center p-8 sm:p-12 lg:p-16 bg-white">
+            <div class="w-full max-w-sm mx-auto space-y-6">
+
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900 tracking-tight">Welcome back!</h2>
+                    <p class="mt-1.5 text-sm text-slate-500">Please sign in to your account to continue.</p>
+                </div>
+
+                <!-- Error Alert Box -->
+                <div id="errorBox" data-testid="login-alert-error" class="hidden bg-red-50 border border-red-200 p-3.5 rounded-xl">
+                    <p id="errorMessage" class="text-sm text-red-600 text-center font-medium"></p>
+                </div>
+
+                <form id="loginForm" data-testid="login-form-auth" class="space-y-4">
+                    <div>
+                        <label for="username" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Username</label>
+                        <input type="text" id="username" name="username" required
+                            data-testid="login-inp-username"
+                            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition"
+                            placeholder="Enter your username">
+                    </div>
+                    <div>
+                        <label for="password" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Password</label>
+                        <input type="password" id="password" name="password" required
+                            data-testid="login-inp-password"
+                            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition"
+                            placeholder="••••••••">
+                    </div>
+
+                    <button type="submit" id="submitBtn"
+                        data-testid="login-btn-submit"
+                        class="w-full py-3 px-4 rounded-xl font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150 shadow-lg shadow-indigo-600/25 mt-2">
+                        Sign In
+                    </button>
+                </form>
+
+            </div>
+        </div>
+
+    </div>
+
+    {% load static %}
+    <script src="{% static 'js/auth.js' %}"></script>
+</body>
+</html>
