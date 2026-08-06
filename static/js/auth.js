@@ -34,6 +34,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (response.ok) {
                 localStorage.setItem('access_token', data.access);
                 localStorage.setItem('refresh_token', data.refresh);
+            if (data.user && data.user.role) {
+                    localStorage.setItem('user_role', data.user.role);
+                }
                 window.location.href = '/dashboard/'; 
             } else {
                 errorMessage.textContent = data.detail || data.non_field_errors?.[0] || 'Tên đăng nhập hoặc mật khẩu không chính xác!';
