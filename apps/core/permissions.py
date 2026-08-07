@@ -39,3 +39,4 @@ class IsQCContextAccess(permissions.BasePermission):
             return request.user.role in ['qc', 'dev']
 
         return request.user.role == 'qc'
+
