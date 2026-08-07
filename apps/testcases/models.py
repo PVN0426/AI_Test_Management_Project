@@ -5,6 +5,7 @@ class Project(models.Model):
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, verbose_name="Tenant")
     name = models.CharField(max_length=255, verbose_name="Project Name")
     key = models.CharField(max_length=20, verbose_name="Project Key")
+    description = models.TextField(blank=True, default="", verbose_name="Project Description")
 
     class Meta:
         db_table = "project"
