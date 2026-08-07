@@ -14,7 +14,7 @@
             </div>
             {% if request.path == '/dashboard/' %}<span class="text-xs">›</span>{% endif %}
         </a>
-        <a href="/projects/" data-testid="common-aside-link-projects" class="flex items-center justify-between px-4 py-3 rounded-xl {% if '/projects/' in request.path and not current_project %}bg-indigo-600 text-white font-medium shadow-lg shadow-indigo-600/30{% else %}hover:bg-slate-800/60 text-slate-400 hover:text-white{% endif %} transition">
+        <a href="/projects/" data-testid="common-aside-link-projects" class="flex items-center justify-between px-4 py-3 rounded-xl {% if request.path == '/projects/' %}bg-indigo-600 text-white font-medium shadow-lg shadow-indigo-600/30{% else %}hover:bg-slate-800/60 text-slate-400 hover:text-white{% endif %} transition">
             <div class="flex items-center space-x-3">
                 <i class="fa-solid fa-folder-open w-5 text-center"></i>
                 <span class="text-sm">Projects List</span>
@@ -23,7 +23,7 @@
         <div class="pt-4 pb-2">
             <div class="flex items-center justify-between px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 <span>Projects Workspace</span>
-                <a href="/projects/create/" data-testid="common-aside-link-createproject" class="hover:text-white transition" title="Create New Project">
+                <a href="/projects/" data-testid="common-aside-link-createproject" class="hover:text-white transition" title="Create New Project">
                     <i class="fa-solid fa-plus"></i>
                 </a>
             </div>
