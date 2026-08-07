@@ -31,5 +31,7 @@ urlpatterns = [
 
     # Resource Endpoints
     path('api/', include(router.urls)),
+    path('api/', include('apps.testcases.urls')),
+    path('api/', include('apps.tenants.urls')),
 
 ]

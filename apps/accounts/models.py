@@ -1,6 +1,20 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 from apps.tenants.models import Tenant
+
+
+class CustomUserManager(UserManager):
+    def create_superuser(self, username, email=None, password=None, **extra_fields):
+        extra_fields.setdefault('role', 'org_admin')
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('is_active', True)
+
+        if extra_fields.get('role') != 'org_admin':
+            raise ValueError('Superuser must have role=org_admin.')
+
+        return super().create_superuser(username, email, password, **extra_fields)
+
 
 class User(AbstractUser):
     ROLE_CHOICES = (
@@ -16,6 +30,8 @@ class User(AbstractUser):
     role = models.CharField(
         max_length=20, choices=ROLE_CHOICES, default="qc", verbose_name="Role"
     )
+
+    objects = CustomUserManager()
 
     class Meta:
         db_table = "user"

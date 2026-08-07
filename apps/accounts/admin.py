@@ -9,3 +9,10 @@ class UserAdmin(BaseUserAdmin):
     fieldsets = BaseUserAdmin.fieldsets + (
         ("Tenant & Role Info", {"fields": ("tenant", "role")}),
     )
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('username', 'email', 'password1', 'password2', 'tenant', 'role', 'is_staff', 'is_superuser'),
+        }),
+    )
+    ordering = ('username',)
