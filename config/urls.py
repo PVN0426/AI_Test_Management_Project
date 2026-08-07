@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import path
 from django.urls import include
 from rest_framework.routers import DefaultRouter
-
+from django.views.generic import TemplateView
 from apps.accounts.views import UserManagementViewSet
 
 
@@ -34,4 +34,8 @@ urlpatterns = [
     path('api/', include('apps.testcases.urls')),
     path('api/', include('apps.tenants.urls')),
 
+    #frontend
+    path('', TemplateView.as_view(template_name='accounts/login.html'), name='login'),
+    path('dashboard/', TemplateView.as_view(template_name='dashboard/dashboard.html'), name='dashboard'),
+    
 ]
