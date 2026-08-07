@@ -1,37 +1,50 @@
-from rest_framework import viewsets
+# api_views.py
+from rest_framework import viewsets, permissions
 from rest_framework.permissions import IsAuthenticated
 
 from apps.testcases.models import Project
 from apps.testcases.serializers import ProjectSerializer
 
 
+# Khai báo Permission Class ngay tại file này
+class IsQCForWriteOrReadOnlyInline(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        if request.user.is_superuser:
+            return True
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return getattr(request.user, "role", None) == "qc"
+
+
 class ProjectViewSet(viewsets.ModelViewSet):
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsQCForWriteOrReadOnlyInline]
 
     def get_queryset(self):
         user = self.request.user
-        
-        # Nếu user là Superuser / Admin hệ thống -> Lấy tất cả Project
-        if user.is_staff or user.is_superuser:
+
+        if user.is_superuser or user.is_staff:
             return Project.objects.all()
 
-        # Lấy tenant từ request middleware hoặc từ user profile
         tenant = getattr(self.request, "tenant", None) or getattr(user, "tenant", None)
-        
+
         if tenant is None:
+            tenant_id = self.request.query_params.get("tenant_id")
+            if tenant_id:
+                return Project.objects.filter(tenant_id=tenant_id)
             return Project.objects.none()
-            
+
         return Project.objects.filter(tenant=tenant)
 
     def perform_create(self, serializer):
-        # Ưu tiên lấy tenant từ payload, nếu không có mới lấy tenant của User/Request
         tenant = None
         if hasattr(serializer, "validated_data"):
             tenant = serializer.validated_data.get("tenant")
-            
+
         if tenant is None:
             tenant = getattr(self.request, "tenant", None) or getattr(self.request.user, "tenant", None)
-            
+
         serializer.save(tenant=tenant)
