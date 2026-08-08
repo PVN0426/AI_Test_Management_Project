@@ -17,10 +17,34 @@ class Project(models.Model):
         return f"[{self.key}] {self.name}"
 
 
+# class Requirement(models.Model):
+#     project = models.ForeignKey(Project, on_delete=models.CASCADE, verbose_name="Project")
+#     ref = models.CharField(max_length=100, verbose_name="Requirement Ref")
+#     text = models.TextField(verbose_name="Requirement Description")
+
+#     class Meta:
+#         db_table = "requirement"
+#         unique_together = ("project", "ref")
+#         verbose_name = "Requirement"
+#         verbose_name_plural = "Requirements"
+
+#     def __str__(self):
+#         return f"{self.ref}"
+
 class Requirement(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, verbose_name="Project")
-    ref = models.CharField(max_length=100, verbose_name="Requirement Ref")
-    text = models.TextField(verbose_name="Requirement Description")
+    PRIORITY_CHOICES = (("critical", "Critical"), ("high", "High"), ("medium", "Medium"), ("low", "Low"),)
+
+    STATUS_CHOICES = (("draft", "Draft"), ("active", "Active"), ("done", "Done"),)
+
+    SOURCE_TYPE_CHOICES = (("manual", "Manual"), ("document", "Document"),)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="requirements", verbose_name="Project")
+    ref = models.CharField(max_length=100, verbose_name="Requirement ID")
+    title = models.CharField(max_length=255, verbose_name="Requirement Title")
+    text = models.TextField(blank=True, default="", verbose_name="Requirement Description")
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default="medium")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
+    source_type = models.CharField(max_length=20, choices=SOURCE_TYPE_CHOICES, default="manual")
+    file = models.FileField(upload_to="requirements/", null=True, blank=True, verbose_name="Requirement Document")
 
     class Meta:
         db_table = "requirement"
@@ -29,8 +53,7 @@ class Requirement(models.Model):
         verbose_name_plural = "Requirements"
 
     def __str__(self):
-        return f"{self.ref}"
-
+        return self.ref
 
 class TestSuite(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, verbose_name="Project")

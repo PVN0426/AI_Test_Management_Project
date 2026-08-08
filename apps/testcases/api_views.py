@@ -1,10 +1,8 @@
-# api_views.py
 from rest_framework import viewsets, permissions
 from rest_framework.permissions import IsAuthenticated
 
-from apps.testcases.models import Project
-from apps.testcases.serializers import ProjectSerializer
-
+from apps.testcases.models import Project, Requirement
+from apps.testcases.serializers import (ProjectSerializer, RequirementSerializer)
 
 # Khai báo Permission Class ngay tại file này
 class IsQCForWriteOrReadOnlyInline(permissions.BasePermission):
@@ -48,3 +46,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
             tenant = getattr(self.request, "tenant", None) or getattr(self.request.user, "tenant", None)
 
         serializer.save(tenant=tenant)
+
+
+class RequirementViewSet(viewsets.ModelViewSet):
+    queryset = Requirement.objects.all()
+    serializer_class = RequirementSerializer
+    permission_classes = [
+        IsAuthenticated,
+        IsQCForWriteOrReadOnlyInline
+    ]

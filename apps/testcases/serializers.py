@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.testcases.models import Project
+from apps.testcases.models import Project, Requirement
 from apps.tenants.models import Tenant
 
 
@@ -45,3 +45,40 @@ class ProjectSerializer(serializers.ModelSerializer):
                 })
 
         return attrs
+
+
+class ProjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Project
+        fields = "__all__"
+
+
+class RequirementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Requirement
+        fields = "__all__"
+
+# class RequirementSerializer(serializers.ModelSerializer):
+
+#     class Meta:
+#         model = Requirement
+
+#         fields = [
+#             "id",
+#             "project",
+#             "ref",
+#             "title",
+#             "text",
+#             "priority",
+#             "status",
+#             "source_type",
+#             "file",
+#             "created_at",
+#             "updated_at",
+#         ]
+
+#         read_only_fields = [
+#             "id",
+#             "created_at",
+#             "updated_at",
+#         ]
