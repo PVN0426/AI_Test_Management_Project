@@ -37,5 +37,7 @@ urlpatterns = [
     #frontend
     path('', TemplateView.as_view(template_name='accounts/login.html'), name='login'),
     path('dashboard/', TemplateView.as_view(template_name='dashboard/dashboard.html'), name='dashboard'),
+   path('projects/', TemplateView.as_view(template_name='projects/project_list.html'), name='project_list'),
+    
     
 ]

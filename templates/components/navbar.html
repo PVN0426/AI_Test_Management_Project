@@ -19,8 +19,45 @@
             </svg>
         </button>
 
-        <div data-testid="common-header-user-avatar" class="w-10 h-10 rounded-xl bg-indigo-600 text-white font-bold flex items-center justify-center shadow-md shadow-indigo-600/20 text-sm">
-            {{ request.user.username|slice:":2"|upper }}
+        <div data-testid="common-header-user-avatar" id="user-avatar" class="w-10 h-10 rounded-xl bg-indigo-600 text-white font-bold flex items-center justify-center shadow-md shadow-indigo-600/20 text-sm">
+            --
         </div>
     </div>
 </header>
+
+<script>
+(function () {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    fetch('/api/auth/me/', {
+        headers: { 'Authorization': 'Bearer ' + token }
+    })
+    .then(function(res) {
+        if (!res.ok) throw new Error('Unauthorized');
+        return res.json();
+    })
+    .then(function(user) {
+        const initials = (user.username || '').slice(0, 2).toUpperCase();
+        const avatarEl = document.getElementById('user-avatar');
+        if (avatarEl) avatarEl.textContent = initials;
+
+        // Cập nhật greeting trên dashboard nếu có
+        const greetingEl = document.querySelector('[data-testid="dashboard-home-text-greeting"]');
+        if (greetingEl) {
+            greetingEl.textContent = 'Good morning, ' + user.username + '!';
+        }
+
+        // Lưu lại role mới nhất vào localStorage
+        if (user.role) {
+            localStorage.setItem('user_role', user.role);
+        }
+    })
+    .catch(function() {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user_role');
+        window.location.href = '/';
+    });
+})();
+</script>
