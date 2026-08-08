@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", async function() {
 
     async function fetchProjects() {
         try {
-            const response = await fetch('/api/projects/');
+            const response = await apiFetch('/api/projects/');
             if (response.ok) {
                 allProjects = await response.json();
                 renderProjects(allProjects);
@@ -32,35 +32,28 @@ document.addEventListener("DOMContentLoaded", async function() {
             
             tableBody.innerHTML = '';
             projects.forEach(project => {
+                const userRole = localStorage.getItem('user_role');
+                const isQC = userRole === 'qc';
+
                 const row = document.createElement('tr');
                 row.className = "hover:bg-slate-50/60 transition";
                 row.setAttribute('data-testid', 'project-row');
                 row.innerHTML = `
-                    <td class="py-4 px-6 font-mono text-xs text-slate-500" data-testid="project-id">${project.id}</td>
-                    <td class="py-4 px-6" data-testid="project-name-cell">
-                        <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
-                                <i class="fa-solid fa-folder"></i>
-                            </div>
-                            <div>
-                                <div class="font-semibold text-slate-900 flex items-center gap-2">
-                                    <span data-testid="project-name">${project.name}</span>
-                                    <span class="px-2 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-600 rounded-full" data-testid="project-status">Active</span>
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="py-4 px-6 text-slate-500 truncate max-w-xs" data-testid="project-description">${project.description || 'No description'}</td>
-                    <td class="py-4 px-6 text-center font-medium text-slate-800" data-testid="project-total-cases">0</td>
-                    <td class="py-4 px-6 text-center font-medium text-slate-800" data-testid="project-open-bugs">0</td>
+                    <td class="py-4 px-6 font-mono text-xs text-slate-500">${project.id}</td>
+                    <td class="py-4 px-6">${project.name}</td>
+                    <td class="py-4 px-6 text-slate-500">${project.description || 'No description'}</td>
+                    <td class="py-4 px-6 text-center">0</td>
+                    <td class="py-4 px-6 text-center">0</td>
                     <td class="py-4 px-6 text-right">
                         <div class="flex items-center justify-end gap-2">
-                            <button onclick="editProject('${project.id}')" data-testid="project-edit-btn" class="p-2 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition cursor-pointer" title="Edit">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                            </button>
-                            <button onclick="deleteProject('${project.id}')" data-testid="project-delete-btn" class="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer" title="Delete">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
+                            ${isQC ? `
+                                <button onclick="editProject('${project.id}')" title="Edit" class="p-2 text-slate-400 hover:text-indigo-600 rounded-lg">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <button onclick="deleteProject('${project.id}')" title="Delete" class="p-2 text-slate-400 hover:text-rose-600 rounded-lg">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            ` : '<span class="text-xs text-slate-400 italic">Chỉ xem</span>'}
                         </div>
                     </td>
                 `;
@@ -82,60 +75,96 @@ document.addEventListener("DOMContentLoaded", async function() {
     }
 });
 
-// Các hàm điều khiển Modal và API
-async function openProjectModal() {
+
+function openProjectModal() {
+    const modalTitle = document.querySelector('[data-testid="project-modal-title"]');
+    if (modalTitle) modalTitle.textContent = "Create New Project";
+
+    const submitBtn = document.querySelector('[data-testid="project-modal-submit-btn"]');
+    if (submitBtn) submitBtn.textContent = "Create Project";
+
+    const form = document.getElementById('createProjectForm');
+    if (form) {
+        form.reset();
+        form.removeAttribute('data-editing-id');
+    }
+
+    loadTenantsForModal();
+
     const modal = document.getElementById('projectModal');
     if (modal) modal.classList.remove('hidden');
+}
 
-    // Tải danh sách Tenant cho thẻ select
+
+function closeProjectModal() {
+    const modal = document.getElementById('projectModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+async function loadTenantsForModal() {
+    const tenantSelect = document.getElementById('projectTenant');
     try {
-        const res = await fetch('/api/tenants/'); // Hoặc endpoint tenants tùy theo API nhóm ông
+        const res = await apiFetch('/api/tenants/');
         if (res.ok) {
             const tenants = await res.json();
-            const tenantSelect = document.getElementById('projectTenant');
             if (tenantSelect) {
+                if (!tenants || tenants.length === 0) {
+                    tenantSelect.innerHTML = '<option value="1" selected>Default Organization (Mặc định)</option>';
+                    return;
+                }
                 tenantSelect.innerHTML = '<option value="" disabled selected>Select organization</option>';
                 tenants.forEach(t => {
                     tenantSelect.innerHTML += `<option value="${t.id}">${t.name}</option>`;
                 });
             }
+        } else {
+            if (tenantSelect) {
+                tenantSelect.innerHTML = '<option value="1" selected>Default Organization (Mặc định)</option>';
+            }
         }
     } catch (e) {
         console.log('Không thể tải danh sách tenants:', e);
-        const tenantSelect = document.getElementById('projectTenant');
         if (tenantSelect) {
-            tenantSelect.innerHTML = '<option value="" disabled selected>Default Organization</option>';
+            tenantSelect.innerHTML = '<option value="1" selected>Default Organization (Mặc định)</option>';
         }
     }
 }
 
-function closeProjectModal() {
-    const modal = document.getElementById('projectModal');
-    if (modal) modal.classList.add('hidden');
-}
-
+// Xử lý Submit Form (Hỗ trợ cả POST tạo mới và PUT chỉnh sửa)
 async function handleCreateProject(event) {
     event.preventDefault();
-    const name = document.getElementById('projectName').value;
-    const key = document.getElementById('projectKey').value;
-    const description = document.getElementById('projectDescription').value;
-    const tenant = document.getElementById('projectTenant').value;
+    
+    const form = document.getElementById('createProjectForm');
+    const editingId = form ? form.getAttribute('data-editing-id') : null;
+    const isEdit = Boolean(editingId);
+
+    const projectData = {
+        name: document.getElementById('projectName').value,
+        key: document.getElementById('projectKey').value,
+        description: document.getElementById('projectDescription').value,
+        tenant: document.getElementById('projectTenant').value || null
+    };
+
+    const url = isEdit ? `/api/projects/${editingId}/` : '/api/projects/';
+    const method = isEdit ? 'PUT' : 'POST';
 
     try {
-        const response = await fetch('/api/projects/', {
-            method: 'POST',
+        const response = await apiFetch(url, {
+            method: method,
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ name, key, description, tenant })
+            body: JSON.stringify(projectData)
         });
 
-        if (response.ok) {
+        if (response && response.ok) {
             closeProjectModal();
             window.location.reload();
         } else {
-            alert('Tạo dự án thất bại!');
+            const errData = response ? await response.json().catch(() => ({})) : {};
+            alert((isEdit ? 'Cập nhật' : 'Tạo') + ' dự án thất bại: ' + (JSON.stringify(errData) || 'Lỗi không xác định'));
         }
     } catch (err) {
         console.error(err);
@@ -143,18 +172,51 @@ async function handleCreateProject(event) {
     }
 }
 
-function editProject(id) {
-    alert('Chức năng sửa Project ID: ' + id);
+// Sửa Project
+async function editProject(id) {
+    try {
+        await loadTenantsForModal();
+
+        const response = await apiFetch(`/api/projects/${id}/`);
+        if (!response.ok) {
+            throw new Error('Không thể tải thông tin dự án');
+        }
+        const project = await response.json();
+        
+        document.getElementById('projectName').value = project.name || '';
+        document.getElementById('projectKey').value = project.key || '';
+        document.getElementById('projectDescription').value = project.description || '';
+        
+        if (document.getElementById('projectTenant')) {
+            document.getElementById('projectTenant').value = project.tenant || '';
+        }
+
+        const modalTitle = document.querySelector('[data-testid="project-modal-title"]');
+        if (modalTitle) modalTitle.textContent = "Edit Project";
+
+        const form = document.getElementById('createProjectForm');
+        if (form) form.setAttribute('data-editing-id', id);
+
+        const submitBtn = document.querySelector('[data-testid="project-modal-submit-btn"]');
+        if (submitBtn) {
+            submitBtn.textContent = "Save Changes";
+        }
+
+        const modal = document.getElementById('projectModal');
+        if (modal) modal.classList.remove('hidden');
+
+    } catch (error) {
+        console.error('Lỗi khi lấy thông tin project để sửa:', error);
+        alert('Không thể tải thông tin dự án để chỉnh sửa.');
+    }
 }
 
+// Xóa Project
 async function deleteProject(id) {
     if (confirm('Bạn có chắc chắn muốn xóa project này không?')) {
         try {
-            const response = await fetch(`/api/projects/${id}/`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken')
-                }
+            const response = await apiFetch(`/api/projects/${id}/`, {
+                method: 'DELETE'
             });
             if (response.ok) {
                 window.location.reload();
@@ -163,6 +225,7 @@ async function deleteProject(id) {
             }
         } catch (err) {
             console.error(err);
+            alert('Đã có lỗi xảy ra khi kết nối tới server.');
         }
     }
 }

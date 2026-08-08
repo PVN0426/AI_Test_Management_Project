@@ -14,9 +14,10 @@ TestFlow{% endblock %} {% block content %}
     </div>
     <button
       type="button"
+      
       onclick="openProjectModal()"
       data-testid="project-add-btn"
-      class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition shadow-md shadow-indigo-600/20 flex items-center gap-2 cursor-pointer"
+      class="qc-only-action bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition shadow-md shadow-indigo-600/20 flex items-center gap-2 cursor-pointer"
     >
       <svg
         class="w-4 h-4"
@@ -76,9 +77,10 @@ TestFlow{% endblock %} {% block content %}
     </p>
     <button
       type="button"
+
       onclick="openProjectModal()"
       data-testid="no-projects-add-btn"
-      class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-sm cursor-pointer"
+      class="qc-only-action bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-sm cursor-pointer"
     >
       + Add Project
     </button>
@@ -224,6 +226,6 @@ TestFlow{% endblock %} {% block content %}
   </div>
 </div>
 
-<!-- Chỉ load project.js (đã chứa đủ openProjectModal, closeProjectModal, handleCreateProject) -->
+<script src="{% static 'js/api.js' %}"></script>
 <script src="{% static 'js/project.js' %}"></script>
 {% endblock %}
