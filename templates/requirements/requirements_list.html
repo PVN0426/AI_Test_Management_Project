@@ -1,0 +1,230 @@
+{% extends 'base.html' %} {% load static %} {% block title %}Requirements -
+TestFlow{% endblock %} {% block content %}
+<div class="max-w-7xl mx-auto space-y-6 pb-24">
+  <div
+    class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+  >
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Requirements</h1>
+      <p class="text-sm text-slate-500">
+        Manage requirement documents & generate test cases with AI
+      </p>
+    </div>
+    <div class="flex items-center gap-3 w-full md:w-auto">
+   
+      <div class="relative flex-1 md:w-64">
+        <span
+          class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"
+        >
+          <i class="fa-solid fa-magnifying-glass text-xs"></i>
+        </span>
+        <input
+          type="text"
+          id="searchRequirement"
+          data-testid="requirement-list-inp-search"
+          placeholder="Search requirements..."
+          class="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+      </div>
+      <button
+        id="uploadDocumentBtn"
+        data-testid="requirement-list-btn-upload"
+        onclick="toggleUploadSection()"
+        class="px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-xl hover:bg-slate-800 transition flex items-center gap-2 whitespace-nowrap shadow-sm"
+      >
+        <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
+        Upload Document
+      </button>
+    </div>
+  </div>
+  <div
+    id="uploadSection"
+    class="bg-white rounded-2xl p-8 border-2 border-dashed border-slate-200 text-center shadow-sm transition-all"
+  >
+    <form id="uploadDocForm" data-testid="requirement-list-form-upload" enctype="multipart/form-data" class="space-y-4">
+      <div
+        class="w-12 h-12 mx-auto rounded-full bg-slate-50 flex items-center justify-center text-slate-400 text-xl shadow-sm"
+      >
+        <i class="fa-solid fa-cloud-arrow-up"></i>
+      </div>
+      <div>
+        <h3 class="text-base font-bold text-slate-800">
+          Upload requirement document
+        </h3>
+        <p class="text-xs text-slate-400 mt-1">
+          Drop DOCX, PDF, TXT, MD, OpenAPI, or XLSX files to auto-parse
+          requirements
+        </p>
+      </div>
+      <div>
+        <input
+          type="file"
+          id="reqFile"
+          class="hidden"
+          data-testid="requirement-list-inp-file"
+          multiple
+          accept=".docx,.pdf,.txt,.md,.xlsx"
+        />
+        <label
+          for="reqFile"
+          data-testid="requirement-list-btn-choose-file"
+          class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer shadow-sm transition"
+        >
+          <i class="fa-solid fa-file-arrow-up text-slate-500"></i> Choose File
+        </label>
+        <span
+          id="selectedFileName"
+          class="block text-xs text-indigo-600 font-semibold mt-2"
+        ></span>
+      </div>
+      <div id="uploadSubmitWrapper" class="hidden pt-2">
+        <button
+          type="submit"
+          data-testid="requirement-list-btn-submit-upload"
+          class="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-xl text-sm font-medium shadow-md transition"
+        >
+          Xác nhận Upload & Thêm vào danh sách
+        </button>
+      </div>
+    </form>
+  </div>
+  <div
+    id="tableSection"
+    class="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden hidden"
+  >
+    <div
+      class="p-4 border-b border-slate-100 flex justify-between items-center"
+    >
+      <span class="font-bold text-slate-800">
+        List of Existing Requests
+      </span>
+
+      <div class="flex items-center gap-2">
+        <!-- Số lượng -->
+        <span
+          id="totalCount"
+          class="text-xs px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full font-semibold"
+        >
+          0 items
+        </span>
+        <button
+          id="deleteSelectedBtn"
+          type="button"
+          data-testid="requirement-list-btn-delete-selected"
+          class="hidden px-3 py-1.5 text-xs font-medium text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition"
+        >
+          <i class="fa-solid fa-trash mr-1"></i>
+          Delete Selected
+        </button>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table data-testid="requirement-list-table-requirements" class="w-full text-left border-collapse">
+        <thead>
+          <tr
+            class="bg-slate-50/50 text-slate-400 text-xs font-semibold uppercase border-b border-slate-100"
+          >
+            <th class="py-3 px-4 w-10 text-center">
+              <input
+                type="checkbox"
+                id="selectAll"
+                data-testid="requirement-list-checkbox-select-all"
+                class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+            </th>
+            <th class="py-3 px-4">Requirement ID</th>
+            <th class="py-3 px-4">Title / Document Name</th>
+            <th class="py-3 px-4">Type</th>
+            <th class="py-3 px-4">Coverage Status</th>
+            <th class="py-3 px-4">Linked Test Cases</th>
+            <th class="py-3 px-4 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody
+          id="requirementTableBody"
+          class="divide-y divide-slate-100 text-sm text-slate-700"
+        >
+        </tbody>
+      </table>
+      <div
+        id="pagination"
+        class="hidden px-4 py-3 border-t border-slate-100 flex items-center justify-between"
+      >
+        <span id="paginationInfo" class="text-xs text-slate-500"></span>
+
+        <div class="flex items-center gap-2">
+          <button
+            id="prevPageBtn"
+            type="button"
+            data-testid="requirement-list-btn-prev-page"
+            class="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
+
+          <span id="pageNumber" class="text-xs font-semibold text-slate-700">
+            1
+          </span>
+
+          <button
+            id="nextPageBtn"
+            type="button"
+            data-testid="requirement-list-btn-next-page"
+            class="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div
+  id="aiFloatingBar"
+   class="fixed bottom-6 left-[calc(50%+158px)] -translate-x-1/2 w-full max-w-4xl px-4 hidden z-50 transition-all duration-300"
+>
+  <div
+    class="bg-white border border-indigo-100 rounded-2xl shadow-xl p-4 flex items-center justify-between gap-4 bg-gradient-to-r from-indigo-50/50 via-white to-indigo-50/50"
+  >
+    <div class="flex items-center gap-3">
+      <div
+        class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md"
+      >
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+      </div>
+      <div>
+        <h4 id="selectedCountText" class="text-sm font-bold text-slate-900">
+          1 Requirement Selected
+        </h4>
+        <p class="text-xs text-slate-500">
+          Generate test cases with AI — cases will be saved to the Test Case
+          Repository
+        </p>
+      </div>
+    </div>
+    <button
+      type="button"
+      data-testid="requirement-list-btn-generate-ai"
+      onclick="generateTestCasesWithAI()"
+      class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium shadow-md transition flex items-center gap-2 whitespace-nowrap"
+    >
+      <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Test Cases with
+      AI
+    </button>
+  </div>
+</div>
+
+<script>
+  function toggleUploadSection() {
+    const section = document.getElementById("uploadSection");
+    section.classList.toggle("hidden");
+    if (!section.classList.contains("hidden")) {
+      section.scrollIntoView({ behavior: "smooth" });
+    }
+  }
+</script>
+
+<script src="{% static 'js/api.js' %}"></script>
+<script src="{% static 'js/requirement.js' %}"></script>
+{% endblock %}

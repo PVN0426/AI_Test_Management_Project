@@ -55,3 +55,9 @@ class RequirementViewSet(viewsets.ModelViewSet):
         IsAuthenticated,
         IsQCForWriteOrReadOnlyInline
     ]
+    def get_queryset(self):
+        project_id = self.request.query_params.get('project_id')
+
+        if not project_id:
+            return Requirement.objects.none()
+        return Requirement.objects.filter(project_id=project_id)
