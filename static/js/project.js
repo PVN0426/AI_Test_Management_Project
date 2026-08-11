@@ -38,22 +38,55 @@ document.addEventListener("DOMContentLoaded", async function() {
                 const row = document.createElement('tr');
                 row.className = "hover:bg-slate-50/60 transition";
                 row.setAttribute('data-testid', 'project-row');
-                row.innerHTML = `
-                    <td class="py-4 px-6 font-mono text-xs text-slate-500">${project.id}</td>
-                    <td class="py-4 px-6">${project.name}</td>
-                    <td class="py-4 px-6 text-slate-500">${project.description || 'No description'}</td>
-                    <td class="py-4 px-6 text-center">0</td>
-                    <td class="py-4 px-6 text-center">0</td>
+               row.innerHTML = `
+                    <td class="py-4 px-6 font-mono text-xs text-slate-500">
+                        ${project.id}
+                    </td>
+
+                    <td class="py-4 px-6">
+                        <a
+                            href="/projects/${project.id}/requirements/"
+                            onclick="selectProject('${project.id}', '${project.name}')"
+                            class="font-semibold text-indigo-600 hover:text-indigo-800 transition">
+                            ${project.name}
+                        </a>
+                    </td>
+
+                    <td class="py-4 px-6 text-slate-500">
+                        ${project.description || 'No description'}
+                    </td>
+
+                    <td class="py-4 px-6 text-center">
+                        0
+                    </td>
+
+                    <td class="py-4 px-6 text-center">
+                        0
+                    </td>
+
                     <td class="py-4 px-6 text-right">
                         <div class="flex items-center justify-end gap-2">
                             ${isQC ? `
-                                <button onclick="editProject('${project.id}')" title="Edit" class="p-2 text-slate-400 hover:text-indigo-600 rounded-lg">
+                                <button
+                                    onclick="editProject('${project.id}')"
+                                    title="Edit"
+                                    class="p-2 text-slate-400 hover:text-indigo-600 rounded-lg"
+                                >
                                     <i class="fa-solid fa-pen-to-square"></i>
                                 </button>
-                                <button onclick="deleteProject('${project.id}')" title="Delete" class="p-2 text-slate-400 hover:text-rose-600 rounded-lg">
+
+                                <button
+                                    onclick="deleteProject('${project.id}')"
+                                    title="Delete"
+                                    class="p-2 text-slate-400 hover:text-rose-600 rounded-lg"
+                                >
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
-                            ` : '<span class="text-xs text-slate-400 italic">Chỉ xem</span>'}
+                            ` : `
+                                <span class="text-xs text-slate-400 italic">
+                                    Chỉ xem
+                                </span>
+                            `}
                         </div>
                     </td>
                 `;
@@ -75,6 +108,20 @@ document.addEventListener("DOMContentLoaded", async function() {
     }
 });
 
+function selectProject(projectId, projectName) {
+
+    localStorage.setItem(
+        'current_project_id',
+        projectId
+    );
+
+    localStorage.setItem(
+        'current_project_name',
+        projectName
+    );
+
+    window.location.href = `/projects/${projectId}/requirements/`;
+}
 
 function openProjectModal() {
     const modalTitle = document.querySelector('[data-testid="project-modal-title"]');
