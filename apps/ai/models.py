@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from apps.tenants.models import Tenant
 
 class AIJob(models.Model):
@@ -16,6 +17,23 @@ class AIJob(models.Model):
     cost_usd = models.DecimalField(max_digits=10, decimal_places=6, default=0.000000, verbose_name="Cost ($)")
     output_json = models.JSONField(null=True, blank=True, verbose_name="Output JSON")
     raw_output = models.TextField(null=True, blank=True, verbose_name="Raw Output")
+    request_context = models.JSONField(default=dict, blank=True, verbose_name="Request Context")
+    review_decision = models.CharField(
+        max_length=20,
+        choices=(("draft", "Draft"), ("approved", "Approved")),
+        null=True,
+        blank=True,
+        verbose_name="QC Decision",
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviewed_ai_jobs",
+        verbose_name="Reviewed By",
+    )
+    committed_at = models.DateTimeField(null=True, blank=True, verbose_name="Committed At")
 
     class Meta:
         db_table = "ai_job"

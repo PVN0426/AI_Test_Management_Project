@@ -14,8 +14,11 @@ from datetime import timedelta
 from pathlib import Path
 import os
 
+from dotenv import load_dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
@@ -171,6 +174,8 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# Cấu hình AI Provider (Mặc định dùng stub cho môi trường Dev)
-AI_PROVIDER = os.environ.get('AI_PROVIDER', 'stub')
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+# Cấu hình AI Provider
+AI_PROVIDER = os.getenv('AI_PROVIDER', 'stub')
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-3.6-flash')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')

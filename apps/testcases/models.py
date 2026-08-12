@@ -86,6 +86,8 @@ class TestCase(models.Model):
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default="manual", verbose_name="Source")
     technique = models.CharField(max_length=20, null=True, blank=True, verbose_name="Design Technique")
     version = models.IntegerField(default=1, verbose_name="Version")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
 
     class Meta:
         db_table = "test_case"
