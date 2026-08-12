@@ -8,4 +8,5 @@ venv/
 env/
 .env
 .env.*
+!.env.example
 .history/
