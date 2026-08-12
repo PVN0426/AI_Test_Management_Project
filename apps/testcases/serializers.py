@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.testcases.models import Project, Requirement
+from apps.testcases.models import Project, Requirement, TestSuite, TestCase, TestStep
 from apps.tenants.models import Tenant
 
 
@@ -47,38 +47,51 @@ class ProjectSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class ProjectSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Project
-        fields = "__all__"
-
 
 class RequirementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Requirement
         fields = "__all__"
 
-# class RequirementSerializer(serializers.ModelSerializer):
+class TestSuiteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TestSuite
+        fields = "__all__"
 
-#     class Meta:
-#         model = Requirement
 
-#         fields = [
-#             "id",
-#             "project",
-#             "ref",
-#             "title",
-#             "text",
-#             "priority",
-#             "status",
-#             "source_type",
-#             "file",
-#             "created_at",
-#             "updated_at",
-#         ]
+class TestStepSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TestStep
+        fields = ["id", "order", "action", "expected"]
 
-#         read_only_fields = [
-#             "id",
-#             "created_at",
-#             "updated_at",
-#         ]
+
+class TestCaseSerializer(serializers.ModelSerializer):
+    steps = TestStepSerializer(many=True, read_only=True)
+    suite_name = serializers.CharField(source="suite.name", read_only=True)
+    is_assigned = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TestCase
+        fields = [
+            "id",
+            "suite",
+            "suite_name",
+            "requirements",
+            "title",
+            "precondition",
+            "priority",
+            "status",
+            "source",
+            "technique",
+            "version",
+            "is_assigned",
+            "steps",
+        ]
+
+    def get_is_assigned(self, obj):
+        return obj.suite.name != "Unassigned"
+
+
+class CommitAIGenerationSerializer(serializers.Serializer):
+    job_id = serializers.IntegerField(min_value=1)
+    decision = serializers.ChoiceField(choices=["draft", "approved"])

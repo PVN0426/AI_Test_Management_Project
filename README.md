@@ -58,6 +58,23 @@ AI_PROVIDER=stub
 - `AI_PROVIDER=stub` dùng cho phát triển, không gọi ra OpenAI.
 - Nếu dùng OpenAI, đổi `AI_PROVIDER=openai` và đặt `OPENAI_API_KEY`.
 
+### Dùng Gemini để sinh test case
+
+```env
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your_google_ai_studio_key
+GEMINI_MODEL=gemini-3.6-flash
+```
+
+Luồng sinh test case dùng Gemini Interactions API và structured JSON output. Sau khi
+đổi dependency hoặc chạy bằng Docker, cài lại packages / build lại image để SDK Google
+được cập nhật:
+
+```bash
+pip install -U -r requirements.txt
+# hoặc: docker compose up --build
+```
+
 ## 5. Migrations
 
 Tạo migration và cập nhật database:
