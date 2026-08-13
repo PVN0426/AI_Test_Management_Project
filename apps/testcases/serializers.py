@@ -2,7 +2,6 @@ from rest_framework import serializers
 from apps.testcases.models import Project, Requirement, TestSuite, TestCase, TestStep
 from apps.tenants.models import Tenant
 
-
 class ProjectSerializer(serializers.ModelSerializer):
     tenant = serializers.PrimaryKeyRelatedField(queryset=Tenant.objects.all(), required=False)
 
@@ -53,16 +52,75 @@ class RequirementSerializer(serializers.ModelSerializer):
         model = Requirement
         fields = "__all__"
 
-class TestSuiteSerializer(serializers.ModelSerializer):
+class TestSuiteCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = TestSuite
-        fields = "__all__"
+        fields = [
+            "id",
+            "name",
+            "precondition",
+            "priority",
+            "test_type",
+            "estimate_time",
+            "requirement_ref",
+        ]
+        read_only_fields = ["id"]
 
 
-class TestStepSerializer(serializers.ModelSerializer):
+class TestSuiteListSerializer(serializers.ModelSerializer):
+    project = serializers.IntegerField(source="project.id", read_only=True)
+    project_name = serializers.CharField(source="project.name", read_only=True)
+    created_by = serializers.CharField(source="created_by.username", read_only=True)
+    test_case_count = serializers.SerializerMethodField()
+
     class Meta:
-        model = TestStep
-        fields = ["id", "order", "action", "expected"]
+        model = TestSuite
+        fields = [
+            "id",
+            "name",
+            "precondition",
+            "project",
+            "project_name",
+            "priority",
+            "test_type",
+            "estimate_time",
+            "requirement_ref",
+            "created_by",
+            "created_at",
+            "updated_at",
+            "test_case_count",
+        ]
+
+    def get_test_case_count(self, obj):
+        return obj.test_cases.count()
+
+
+class TestSuiteDetailSerializer(serializers.ModelSerializer):
+    project = serializers.IntegerField(source="project.id", read_only=True)
+    project_name = serializers.CharField(source="project.name", read_only=True)
+    created_by = serializers.CharField(source="created_by.username", read_only=True)
+    test_case_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TestSuite
+        fields = [
+            "id",
+            "name",
+            "precondition",
+            "project",
+            "project_name",
+            "priority",
+            "test_type",
+            "estimate_time",
+            "requirement_ref",
+            "created_by",
+            "created_at",
+            "updated_at",
+            "test_case_count",
+        ]
+
+    def get_test_case_count(self, obj):
+        return obj.test_cases.count()
 
 class TestStepSerializer(serializers.ModelSerializer):
     class Meta:

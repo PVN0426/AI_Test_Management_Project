@@ -5,12 +5,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.exceptions import ValidationError
 from rest_framework import filters, viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+from django.shortcuts import get_object_or_404
 
 
 from apps.testcases.models import Project, Requirement, TestSuite, TestCase, TestStep
-from apps.testcases.serializers import (ProjectSerializer, RequirementSerializer, TestSuiteSerializer, TestCaseSerializer, CommitAIGenerationSerializer)
+from apps.testcases.serializers import (ProjectSerializer, RequirementSerializer, TestSuiteCreateSerializer, TestSuiteListSerializer, TestSuiteDetailSerializer, TestCaseSerializer, CommitAIGenerationSerializer)
 from apps.ai.models import AIJob
 from apps.ai.services import AIService
 
@@ -74,9 +76,37 @@ class RequirementViewSet(viewsets.ModelViewSet):
 
 class TestSuiteViewSet(viewsets.ModelViewSet):
     queryset = TestSuite.objects.all()
-    serializer_class = TestSuiteSerializer
     permission_classes = [IsAuthenticated, IsQCForWriteOrReadOnlyInline]
 
+    def get_serializer_class(self):
+        if self.action == "create":
+            return TestSuiteCreateSerializer
+        elif self.action == "retrieve":
+            return TestSuiteDetailSerializer
+        return TestSuiteListSerializer
+
+    def get_queryset(self):
+        project_id = self.kwargs.get("project_id")
+
+        if project_id:
+            return TestSuite.objects.filter(project_id=project_id)
+
+        return TestSuite.objects.all()
+
+    def perform_create(self, serializer):
+        project = get_object_or_404(Project, pk=self.kwargs["project_id"])
+
+        name = serializer.validated_data["name"]
+
+        if TestSuite.objects.filter(project=project, name=name).exists():
+            raise ValidationError({
+                "name": "Suite name already exists in this project."
+            })
+
+        serializer.save(
+            project=project,
+            created_by=self.request.user
+        )
 
 class TestCaseViewSet(viewsets.ModelViewSet):
     queryset = TestCase.objects.all()
