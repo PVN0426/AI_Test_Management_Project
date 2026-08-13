@@ -11,7 +11,6 @@ TestFlow{% endblock %} {% block content %}
       </p>
     </div>
     <div class="flex items-center gap-3 w-full md:w-auto">
-   
       <div class="relative flex-1 md:w-64">
         <span
           class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"
@@ -83,7 +82,7 @@ TestFlow{% endblock %} {% block content %}
           data-testid="requirement-list-btn-submit-upload"
           class="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-xl text-sm font-medium shadow-md transition"
         >
-          Xác nhận Upload & Thêm vào danh sách
+          Confirm Upload and Add to List
         </button>
       </div>
     </form>
@@ -98,9 +97,7 @@ TestFlow{% endblock %} {% block content %}
       <span class="font-bold text-slate-800">
         List of Existing Requests
       </span>
-
       <div class="flex items-center gap-2">
-        <!-- Số lượng -->
         <span
           id="totalCount"
           class="text-xs px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full font-semibold"
@@ -214,7 +211,45 @@ TestFlow{% endblock %} {% block content %}
     </button>
   </div>
 </div>
-
+<!-- AI GENERATING MODAL -->
+<div
+    id="aiGeneratingModal"
+    class="hidden fixed inset-0 z-[100] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center"
+>
+    <div
+        class="w-full max-w-2xl mx-4 bg-white rounded-2xl shadow-2xl p-8 text-center"
+    >
+        <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-indigo-100 flex items-center justify-center">
+            <div
+                class="w-16 h-16 rounded-full bg-indigo-600 text-white flex items-center justify-center text-2xl"
+            >
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </div>
+        </div>
+        <h2
+            id="aiGeneratingTitle"
+            class="text-xl font-bold text-slate-900"
+        >
+            AI is analyzing documents and writing test scenarios...
+        </h2>
+        <p
+            id="aiGeneratingMessage"
+            class="mt-2 text-sm text-slate-500"
+        >
+            This may take a few moments
+        </p>
+        <div class="mt-6 w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+            <div
+                class="h-2 bg-indigo-600 rounded-full animate-pulse"
+                style="width: 15%"
+            ></div>
+        </div>
+        <p
+            id="aiGeneratingCount"
+            class="mt-4 text-xs text-slate-400"
+        ></p>
+    </div>
+</div>
 <script>
   function toggleUploadSection() {
     const section = document.getElementById("uploadSection");
@@ -224,7 +259,7 @@ TestFlow{% endblock %} {% block content %}
     }
   }
 </script>
-
+{% include "requirements/ai_testcase_preview_modal.html" %}
 <script src="{% static 'js/api.js' %}"></script>
 <script src="{% static 'js/requirement.js' %}"></script>
 {% endblock %}
