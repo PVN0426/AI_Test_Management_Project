@@ -5,6 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, viewsets
 
 
 from apps.testcases.models import Project, Requirement, TestSuite, TestCase, TestStep
@@ -79,33 +81,13 @@ class TestSuiteViewSet(viewsets.ModelViewSet):
 class TestCaseViewSet(viewsets.ModelViewSet):
     queryset = TestCase.objects.all()
     serializer_class = TestCaseSerializer
-    permission_classes = [IsAuthenticated, IsQCForWriteOrReadOnlyInline]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter,]
+    filterset_fields = ["review_status",]
+    search_fields = ["title", "precondition",]
+    ordering_fields = ["id", "title", "review_status",]
+    ordering = ["id",]
 
-    @action(detail=False, methods=["post"], url_path="assign-suite")
-    def assign_suite(self, request):
-        test_case_ids = request.data.get("test_case_ids", [])
-        target_suite_id = request.data.get("target_suite_id")
-
-        if not test_case_ids or not target_suite_id:
-            return Response(
-                {"error": "Vui lòng cung cấp 'test_case_ids' và 'target_suite_id'."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        try:
-            target_suite = TestSuite.objects.get(id=target_suite_id)
-        except TestSuite.DoesNotExist:
-            return Response({"error": "Test Suite đích không tồn tại."}, status=status.HTTP_404_NOT_FOUND)
-
-        # Cập nhật suite cho danh sách Test Cases
-        updated_count = TestCase.objects.filter(id__in=test_case_ids).update(suite=target_suite)
-
-        return Response({
-            "message": f"Đã chuyển thành công {updated_count} Test Case sang Test Suite '{target_suite.name}'.",
-            "target_suite_id": target_suite.id,
-            "target_suite_name": target_suite.name
-        }, status=status.HTTP_200_OK)
-
+    # Thêm action này vàoViewSet đang kích hoạt
     @action(detail=False, methods=["post"], url_path="commit-ai-generation")
     def commit_ai_generation(self, request):
         """Persist a reviewed AI preview as draft or approved test cases."""
@@ -169,7 +151,7 @@ class TestCaseViewSet(viewsets.ModelViewSet):
                     title=tc_data.get("title", "AI Generated Test Case"),
                     precondition=tc_data.get("precondition", ""),
                     priority=priority if priority in valid_priorities else "medium",
-                    status=decision,
+                    review_status=decision,
                     source="ai",
                 )
                 test_case.requirements.set(requirements)
@@ -189,9 +171,9 @@ class TestCaseViewSet(viewsets.ModelViewSet):
 
                 created_test_cases.append({
                     "test_id": test_case.id,
-                    "case_id": tc_data.get("case_id") or f"TC_{index:03d}",
+                    "case_id": f"TC_{index:03d}",
                     "title": test_case.title,
-                    "status": test_case.status,
+                    "status": test_case.review_status,
                     "suite_id": default_suite.id,
                     "suite_name": default_suite.name,
                     "steps_count": test_case.steps.count(),
@@ -211,7 +193,7 @@ class TestCaseViewSet(viewsets.ModelViewSet):
             "decision": decision,
             "test_cases": created_test_cases,
         }, status=status.HTTP_201_CREATED)
-
+    
 
 class GenerateTestCaseFromRequirementAPIView(APIView):
     permission_classes = [IsAuthenticated, IsQCForWriteOrReadOnlyInline]

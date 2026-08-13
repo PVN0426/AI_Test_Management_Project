@@ -64,33 +64,61 @@ class TestStepSerializer(serializers.ModelSerializer):
         model = TestStep
         fields = ["id", "order", "action", "expected"]
 
+class TestStepSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TestStep
+        fields = ["id", "order", "action", "expected"]
+        read_only_fields = ["id"]
 
 class TestCaseSerializer(serializers.ModelSerializer):
-    steps = TestStepSerializer(many=True, read_only=True)
-    suite_name = serializers.CharField(source="suite.name", read_only=True)
-    is_assigned = serializers.SerializerMethodField()
+    steps = TestStepSerializer(many=True, required=False)
 
     class Meta:
         model = TestCase
         fields = [
             "id",
             "suite",
-            "suite_name",
             "requirements",
             "title",
             "precondition",
             "priority",
-            "status",
+            "review_status",
+            "test_result",
             "source",
             "technique",
             "version",
-            "is_assigned",
             "steps",
         ]
 
-    def get_is_assigned(self, obj):
-        return obj.suite.name != "Unassigned"
+        read_only_fields = ["id"]
 
+    def create(self, validated_data):
+        steps_data = validated_data.pop("steps", [])
+
+        test_case = TestCase.objects.create(**validated_data)
+
+        for step_data in steps_data:
+            TestStep.objects.create(case=test_case, **step_data)
+
+        return test_case
+
+    def update(self, instance, validated_data):
+        steps_data = validated_data.pop("steps", None)
+
+        # Update Test Case
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+
+        # Nếu request có gửi steps thì thay toàn bộ steps cũ
+        if steps_data is not None:
+            instance.steps.all().delete()
+
+            for step_data in steps_data:
+                TestStep.objects.create(case=instance, **step_data)
+
+        return instance
 
 class CommitAIGenerationSerializer(serializers.Serializer):
     job_id = serializers.IntegerField(min_value=1)
