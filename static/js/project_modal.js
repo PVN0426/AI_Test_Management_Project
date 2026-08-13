@@ -77,7 +77,7 @@ function getCookie(name) {
         }
     }
     return cookieValue;
-}// Mở modal tạo mới
+}
 function openProjectModal() {
     const modalTitle = document.querySelector('[data-testid="project-modal-title"]');
     if (modalTitle) modalTitle.textContent = "Create New Project";
@@ -88,7 +88,7 @@ function openProjectModal() {
     const form = document.getElementById('createProjectForm');
     if (form) {
         form.reset();
-        form.removeAttribute('data-editing-id'); // Xóa ID để hệ thống hiểu đây là tạo mới
+        form.removeAttribute('data-editing-id'); 
     }
 
     const modal = document.getElementById('projectModal');
@@ -97,8 +97,6 @@ function openProjectModal() {
         loadTenantsForModal();
     }
 }
-
-// Đóng modal
 function closeProjectModal() {
     const modal = document.getElementById('projectModal');
     if (modal) {
@@ -106,7 +104,6 @@ function closeProjectModal() {
     }
 }
 
-// Load danh sách Tenant bằng apiFetch
 async function loadTenantsForModal() {
     const tenantSelect = document.getElementById('projectTenant');
     try {
@@ -136,7 +133,6 @@ async function loadTenantsForModal() {
     }
 }
 
-// Xử lý Submit form (Tự động phân biệt Tạo mới hay Lưu chỉnh sửa)
 async function handleCreateProject(event) {
     event.preventDefault();
     
@@ -154,7 +150,6 @@ async function handleCreateProject(event) {
     try {
         let response;
         if (isEdit) {
-            // Nếu đang sửa -> Gọi API PUT/PATCH
             response = await apiFetch(`/api/projects/${editingId}/`, {
                 method: 'PUT',
                 headers: {
@@ -163,7 +158,6 @@ async function handleCreateProject(event) {
                 body: JSON.stringify(projectData)
             });
         } else {
-            // Nếu đang tạo mới -> Gọi API POST
             response = await apiFetch('/api/projects/', {
                 method: 'POST',
                 headers: {

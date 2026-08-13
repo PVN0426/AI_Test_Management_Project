@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", function () {
-
   const reqFileInput = document.getElementById("reqFile");
 
   const selectedFileNameSpan = document.getElementById("selectedFileName");
@@ -37,6 +36,25 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const searchRequirement = document.getElementById("searchRequirement");
 
+  const aiGeneratingModal = document.getElementById("aiGeneratingModal");
+
+  const aiGeneratingCount = document.getElementById("aiGeneratingCount");
+
+  const aiPreviewModal = document.getElementById("aiPreviewModal");
+
+  const aiPreviewContent = document.getElementById("aiPreviewContent");
+
+  const aiPreviewCount = document.getElementById("aiPreviewCount");
+
+  const closeAIPreviewBtn = document.getElementById("closeAIPreviewBtn");
+
+  const saveAIDraftBtn = document.getElementById("saveAIDraftBtn");
+
+  const confirmAISaveBtn = document.getElementById("confirmAISaveBtn");
+
+  let generatedTestCases = [];
+
+  let generatedJobId = null;
   // ==========================================
   // ROLE
   // ==========================================
@@ -44,6 +62,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const currentRole = localStorage.getItem("user_role");
 
   const canManageRequirement = currentRole === "qc";
+  const canGenerateAI = currentRole === "qc";
   if (!canManageRequirement) {
     if (uploadSection) {
       uploadSection.classList.add("hidden");
@@ -225,8 +244,6 @@ document.addEventListener("DOMContentLoaded", function () {
     // --------------------------------------
 
     pageItems.forEach(function (req) {
-      console.log("Requirement:", req);
-
       const row = document.createElement("tr");
 
       row.className = "hover:bg-slate-50 transition";
@@ -323,30 +340,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
     attachCheckboxEvents();
   }
-
   // ==========================================
   // PAGINATION UI
   // ==========================================
-
   function updatePagination(totalPages, startIndex, endIndex) {
     if (!pagination) return;
 
     if (totalPages <= 1) {
       pagination.classList.add("hidden");
-
       return;
     }
-
     pagination.classList.remove("hidden");
 
     const actualEnd = Math.min(endIndex, allRequirements.length);
-
     paginationInfo.textContent = `Showing ${startIndex + 1}-${actualEnd} of ${allRequirements.length}`;
-
     pageNumber.textContent = `${currentPage} / ${totalPages}`;
-
     prevPageBtn.disabled = currentPage === 1;
-
     nextPageBtn.disabled = currentPage === totalPages;
   }
 
@@ -483,64 +492,61 @@ document.addEventListener("DOMContentLoaded", function () {
   // ==========================================
   // CHECKBOX EVENTS
   // ==========================================
+  function attachCheckboxEvents() {
+    const checkboxes = document.querySelectorAll(".req-checkbox");
 
- function attachCheckboxEvents() {
-  const checkboxes = document.querySelectorAll(".req-checkbox");
-
-  checkboxes.forEach(function (checkbox) {
-    checkbox.addEventListener("change", function () {
-      const id = String(checkbox.value);
-
-      if (checkbox.checked) {
-        selectedRequirementIds.add(id);
-      } else {
-        selectedRequirementIds.delete(id);
-      }
-      if (selectAllCheckbox) {
-        const checkedCount = Array.from(checkboxes).filter(
-          (checkbox) => checkbox.checked
-        ).length;
-
-        selectAllCheckbox.checked =
-          checkboxes.length > 0 && checkedCount === checkboxes.length;
-
-        selectAllCheckbox.indeterminate =
-          checkedCount > 0 && checkedCount < checkboxes.length;
-      }
-
-      updateSelectionUI();
-    });
-  });
-
-  if (selectAllCheckbox) {
-    selectAllCheckbox.checked =
-      checkboxes.length > 0 &&
-      Array.from(checkboxes).every((checkbox) => checkbox.checked);
-
-    selectAllCheckbox.indeterminate =
-      checkboxes.length > 0 &&
-      Array.from(checkboxes).some((checkbox) => checkbox.checked) &&
-      !selectAllCheckbox.checked;
-
-    selectAllCheckbox.onchange = function () {
-      checkboxes.forEach(function (checkbox) {
-        checkbox.checked = selectAllCheckbox.checked;
-
+    checkboxes.forEach(function (checkbox) {
+      checkbox.addEventListener("change", function () {
         const id = String(checkbox.value);
-
-        if (selectAllCheckbox.checked) {
+        if (checkbox.checked) {
           selectedRequirementIds.add(id);
         } else {
           selectedRequirementIds.delete(id);
         }
+        if (selectAllCheckbox) {
+          const checkedCount = Array.from(checkboxes).filter(
+            (checkbox) => checkbox.checked,
+          ).length;
+
+          selectAllCheckbox.checked =
+            checkboxes.length > 0 && checkedCount === checkboxes.length;
+
+          selectAllCheckbox.indeterminate =
+            checkedCount > 0 && checkedCount < checkboxes.length;
+        }
+        updateSelectionUI();
       });
+    });
 
-      selectAllCheckbox.indeterminate = false;
+    if (selectAllCheckbox) {
+      selectAllCheckbox.checked =
+        checkboxes.length > 0 &&
+        Array.from(checkboxes).every((checkbox) => checkbox.checked);
 
-      updateSelectionUI();
-    };
+      selectAllCheckbox.indeterminate =
+        checkboxes.length > 0 &&
+        Array.from(checkboxes).some((checkbox) => checkbox.checked) &&
+        !selectAllCheckbox.checked;
+
+      selectAllCheckbox.onchange = function () {
+        checkboxes.forEach(function (checkbox) {
+          checkbox.checked = selectAllCheckbox.checked;
+
+          const id = String(checkbox.value);
+
+          if (selectAllCheckbox.checked) {
+            selectedRequirementIds.add(id);
+          } else {
+            selectedRequirementIds.delete(id);
+          }
+        });
+
+        selectAllCheckbox.indeterminate = false;
+
+        updateSelectionUI();
+      };
+    }
   }
-}
   // ==========================================
   // UPDATE SELECTED UI
   // ==========================================
@@ -549,7 +555,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const count = selectedRequirementIds.size;
 
     if (aiFloatingBar) {
-      if (count > 0) {
+      if (count > 0 && canGenerateAI) {
         aiFloatingBar.classList.remove("hidden");
       } else {
         aiFloatingBar.classList.add("hidden");
@@ -676,14 +682,265 @@ document.addEventListener("DOMContentLoaded", function () {
   // ==========================================
   // GENERATE AI
   // ==========================================
-  window.generateTestCasesWithAI = function () {
-    const selectedIds = Array.from(selectedRequirementIds);
-    if (selectedIds.length === 0) {
-      alert("Vui lòng chọn ít nhất một requirement!");
+  window.generateTestCasesWithAI = async function () {
+    if (!canGenerateAI) {
+      alert("Bạn không có quyền sử dụng chức năng AI.");
       return;
     }
-    alert(
-      `Đang gửi yêu cầu sinh Test Case bằng AI cho các ID: ${selectedIds.join(", ")}`,
-    );
+    const selectedIds = Array.from(selectedRequirementIds);
+
+    if (selectedIds.length === 0) {
+      alert("Vui lòng chọn ít nhất một requirement!");
+
+      return;
+    }
+    if (aiGeneratingModal) {
+      aiGeneratingModal.classList.remove("hidden");
+    }
+    if (aiGeneratingCount) {
+      aiGeneratingCount.textContent = `${selectedIds.length} requirement(s) selected`;
+    }
+    try {
+      const response = await apiFetch("/api/requirements/generate-testcases/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          project_id: currentProjectId,
+          requirement_ids: selectedIds,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+
+        console.error("AI generation failed:", {
+          status: response.status,
+          statusText: response.statusText,
+          response: errorText,
+        });
+        alert(
+          `Generate Test Cases thất bại!\n` +
+            `Status: ${response.status}\n` +
+            `Error: ${errorText}`,
+        );
+        return;
+      }
+      const data = await response.json();
+
+      generatedJobId = data.job_id;
+      openAIPreviewModal(data.test_cases, data.job_id);
+    } catch (error) {
+      alert("Đã xảy ra lỗi khi generate Test Cases.");
+    } finally {
+      if (aiGeneratingModal) {
+        aiGeneratingModal.classList.add("hidden");
+      }
+    }
   };
 });
+
+function renderAIGeneratedTestCases(testCases) {
+  if (!aiPreviewContent) return;
+  aiPreviewContent.innerHTML = "";
+  if (!Array.isArray(testCases) || testCases.length === 0) {
+    aiPreviewContent.innerHTML = `
+            <div class="text-center py-10 text-slate-400">
+                Không có Test Case nào được sinh.
+            </div>
+        `;
+    return;
+  }
+  testCases.forEach(function (testCase, index) {
+    const card = document.createElement("div");
+
+    card.className =
+      "bg-white border border-slate-200 rounded-xl p-5 shadow-sm";
+    const priority = testCase.priority || "Medium";
+    const steps = Array.isArray(testCase.steps) ? testCase.steps : [];
+    card.innerHTML = `
+            <div class="flex items-start justify-between gap-4">
+
+                <div>
+                    <p class="text-xs font-semibold text-indigo-600">
+                        ${testCase.case_id || `TC_${String(index + 1).padStart(3, "0")}`}
+                    </p>
+
+                    <h3 class="mt-1 text-base font-semibold text-slate-900">
+                        ${testCase.title || "Untitled Test Case"}
+                    </h3>
+                </div>
+
+                <span class="
+                    px-2.5 py-1
+                    rounded-md
+                    text-xs
+                    font-medium
+                    bg-indigo-50
+                    text-indigo-600
+                ">
+                    ${priority}
+                </span>
+
+            </div>
+
+            <div class="mt-4">
+
+                <p class="text-xs font-semibold text-slate-500 uppercase">
+                    Precondition
+                </p>
+                <p class="mt-1 text-sm text-slate-700">
+                    ${testCase.precondition || "None"}
+                </p>
+            </div>
+            <div class="mt-4">
+
+                <p class="text-xs font-semibold text-slate-500 uppercase mb-2">
+                    Test Steps
+                </p>
+
+                <div class="overflow-hidden border border-slate-200 rounded-lg">
+
+                    <table class="w-full text-sm">
+
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-3 py-2 text-left w-16">
+                                    #
+                                </th>
+
+                                <th class="px-3 py-2 text-left">
+                                    Action
+                                </th>
+
+                                <th class="px-3 py-2 text-left">
+                                    Expected Result
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            ${steps
+                              .map(function (step, stepIndex) {
+                                return `
+                                        <tr class="border-t border-slate-200">
+
+                                            <td class="px-3 py-2 font-medium text-slate-500">
+                                                ${stepIndex + 1}
+                                            </td>
+
+                                            <td class="px-3 py-2 text-slate-700">
+                                                ${step.action || ""}
+                                            </td>
+
+                                            <td class="px-3 py-2 text-slate-700">
+                                                ${step.expected || ""}
+                                            </td>
+
+                                        </tr>
+                                    `;
+                              })
+                              .join("")}
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+        `;
+
+    aiPreviewContent.appendChild(card);
+  });
+
+  if (aiPreviewCount) {
+    aiPreviewCount.textContent = `${testCases.length} Test Cases generated`;
+  }
+}
+function openAIPreviewModal(testCases, jobId) {
+  generatedTestCases = testCases;
+  generatedJobId = jobId;
+
+  renderAIGeneratedTestCases(testCases);
+
+  if (aiPreviewModal) {
+    aiPreviewModal.classList.remove("hidden");
+  }
+}
+
+// ==========================================
+// COMMIT AI GENERATION
+// ==========================================
+
+if (saveAIDraftBtn) {
+  saveAIDraftBtn.addEventListener("click", function () {
+    commitAIGeneration("draft");
+  });
+}
+if (confirmAISaveBtn) {
+  confirmAISaveBtn.addEventListener("click", function () {
+    commitAIGeneration("approved");
+  });
+}
+// ==========================================
+// COMMIT AI GENERATION API
+// ==========================================
+
+async function commitAIGeneration(decision) {
+  if (!generatedJobId) {
+    alert("Không tìm thấy AI generation job.");
+
+    return;
+  }
+  const button = decision === "draft" ? saveAIDraftBtn : confirmAISaveBtn;
+
+  if (!button) {
+    return;
+  }
+  const originalText = button.innerHTML;
+  button.disabled = true;
+  button.innerHTML = `
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        Saving...
+    `;
+
+  try {
+    const response = await apiFetch("/api/testcases/commit-ai-generation/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        job_id: generatedJobId,
+        decision: decision,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      console.error("Commit AI failed:", data);
+
+      alert(data.error || data.detail || "Không thể lưu Test Cases.");
+      return;
+    }
+    if (decision === "draft") {
+      alert("Test Cases đã được lưu ở trạng thái Draft.");
+    } else {
+      alert("Test Cases đã được Confirm & Save thành công.");
+    }
+
+    if (aiPreviewModal) {
+      aiPreviewModal.classList.add("hidden");
+    }
+
+    window.location.href = `/projects/${currentProjectId}/test-cases/`;
+  } catch (error) {
+    console.error("Commit AI generation error:", error);
+
+    alert("Đã xảy ra lỗi khi lưu Test Cases.");
+  } finally {
+    button.disabled = false;
+
+    button.innerHTML = originalText;
+  }
+}
