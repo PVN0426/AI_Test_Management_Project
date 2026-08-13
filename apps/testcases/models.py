@@ -16,21 +16,6 @@ class Project(models.Model):
     def __str__(self):
         return f"[{self.key}] {self.name}"
 
-
-# class Requirement(models.Model):
-#     project = models.ForeignKey(Project, on_delete=models.CASCADE, verbose_name="Project")
-#     ref = models.CharField(max_length=100, verbose_name="Requirement Ref")
-#     text = models.TextField(verbose_name="Requirement Description")
-
-#     class Meta:
-#         db_table = "requirement"
-#         unique_together = ("project", "ref")
-#         verbose_name = "Requirement"
-#         verbose_name_plural = "Requirements"
-
-#     def __str__(self):
-#         return f"{self.ref}"
-
 class Requirement(models.Model):
     PRIORITY_CHOICES = (("critical", "Critical"), ("high", "High"), ("medium", "Medium"), ("low", "Low"),)
 
@@ -73,19 +58,21 @@ class TestSuite(models.Model):
 
 
 class TestCase(models.Model):
-    PRIORITY_CHOICES = (("critical", "Critical"), ("high", "High"), ("medium", "Medium"), ("low", "Low"))
-    STATUS_CHOICES = (("draft", "Draft"), ("approved", "Approved"))
-    SOURCE_CHOICES = (("manual", "Manual"), ("ai", "AI"))
-
+    PRIORITY_CHOICES = (("critical", "Critical"), ("high", "High"), ("medium", "Medium"), ("low", "Low"),)
+    REVIEW_STATUS_CHOICES = (("draft", "Draft"), ("approved", "Approved"),)
+    TEST_RESULT_CHOICES = (("not_run", "Not Run"), ("passed", "Passed"), ("failed", "Failed"), ("skipped", "Skipped"), ("blocked", "Blocked"),)
+    SOURCE_CHOICES = (("manual", "Manual"), ("ai", "AI"),)
     suite = models.ForeignKey(TestSuite, on_delete=models.CASCADE, verbose_name="Test Suite")
     requirements = models.ManyToManyField(Requirement, related_name="test_cases", blank=True, verbose_name="Linked Requirements")
     title = models.CharField(max_length=255, verbose_name="Test Case Title")
     precondition = models.TextField(blank=True, default="", verbose_name="Precondition")
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default="medium", verbose_name="Priority")
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft", verbose_name="Status")
+    review_status = models.CharField(max_length=20, choices=REVIEW_STATUS_CHOICES, default="draft", verbose_name="Review Status")
+    test_result = models.CharField(max_length=20, choices=TEST_RESULT_CHOICES, default="not_run", verbose_name="Test Result")
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default="manual", verbose_name="Source")
     technique = models.CharField(max_length=20, null=True, blank=True, verbose_name="Design Technique")
     version = models.IntegerField(default=1, verbose_name="Version")
+    estimate_time = models.CharField(max_length=50, blank=True, default="", verbose_name="Estimate Time")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
 
@@ -96,8 +83,7 @@ class TestCase(models.Model):
 
     def __str__(self):
         return f"TC#{self.id}: {self.title}"
-
-
+     
 class TestStep(models.Model):
     case = models.ForeignKey(TestCase, on_delete=models.CASCADE, related_name="steps", verbose_name="Test Case")
     order = models.IntegerField(verbose_name="Step Order")

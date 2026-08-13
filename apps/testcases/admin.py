@@ -11,8 +11,9 @@ class RequirementAdmin(admin.ModelAdmin):
 
 @admin.register(TestCase)
 class TestCaseAdmin(admin.ModelAdmin):
-    list_display = ("id", "title", "suite", "priority", "status", "source")
-    list_filter = ("status", "priority", "source")
+    list_display = ("id", "title", "suite", "priority", "review_status", "test_result", "source",)
+    list_filter = ("review_status",)
+    search_fields = ("title",)
 
 admin.site.register(TestSuite)
 admin.site.register(TestStep)

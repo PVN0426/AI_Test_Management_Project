@@ -26,3 +26,4 @@ djangorestframework==3.16.0
 djangorestframework-simplejwt==5.5.1
 # Interactions API (Gemini 3.x) requires a current Google Gen AI SDK.
 google-genai>=1.0.0
+django-filter
