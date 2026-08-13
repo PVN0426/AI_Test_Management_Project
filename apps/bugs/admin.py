@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Bug, BugHistory
+from .models import Bug, BugAttachment, BugHistory
 
 @admin.register(Bug)
 class BugAdmin(admin.ModelAdmin):
@@ -7,3 +7,4 @@ class BugAdmin(admin.ModelAdmin):
     list_filter = ("status", "severity", "project")
 
 admin.site.register(BugHistory)
+admin.site.register(BugAttachment)
