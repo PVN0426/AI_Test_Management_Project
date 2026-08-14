@@ -36,6 +36,7 @@ urlpatterns = [
     path('api/', include('apps.testcases.urls')),
     path('api/', include('apps.tenants.urls')),
     path('api/', include('apps.bugs.urls')),
+    path('api/', include('apps.reports.urls')),
 
     #frontend
     path('', TemplateView.as_view(template_name='accounts/login.html'), name='login'),
