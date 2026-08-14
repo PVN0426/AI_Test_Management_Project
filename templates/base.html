@@ -5,38 +5,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}AI Test Management Platform{% endblock %}</title>
-    
-    <!-- Tailwind CSS (Dùng CDN cho nhanh trong MVP) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- HTMX Library Local -->
     <script src="{% static 'js/htmx.min.js' %}"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-gray-100 text-gray-900 font-sans antialiased" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
 
     <div class="flex h-screen overflow-hidden">
-        <!-- Sidebar Navigation -->
         {% include "components/sidebar.html" %}
-
-        <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col overflow-y-auto">
-            <!-- Header Navbar -->
-            {% include "components/navbar.html" %}
-
-            <!-- Dynamic Body Content -->
+        <div class="flex-1 flex flex-col overflow-y-auto bg-slate-50">
+            <div class="p-4 pb-0">
+                {% include "components/navbar.html" %}
+            </div>
             <main class="p-6">
                 {% block content %}
-                <!-- Nội dung các trang kế thừa sẽ điền vào đây -->
                 {% endblock %}
             </main>
         </div>
     </div>
-
-    <!-- Container cho Toast / Modals động qua HTMX -->
     <div id="modal-container"></div>
-
-    <!-- JavaScript xử lý bắt lỗi HTTP 402 Quota Exceeded từ HTMX -->
     <script>
         document.body.addEventListener('htmx:responseError', function(evt) {
             if (evt.detail.xhr.status === 402) {

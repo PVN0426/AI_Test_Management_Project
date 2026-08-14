@@ -90,7 +90,7 @@ class TestCaseSerializer(serializers.ModelSerializer):
             "steps",
         ]
 
-        read_only_fields = ["id"]
+        read_only_fields = ["id", "suite"]
 
     def create(self, validated_data):
         steps_data = validated_data.pop("steps", [])
