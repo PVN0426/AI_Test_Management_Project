@@ -1,6 +1,6 @@
 from django.db import transaction
 from django.utils import timezone
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.views import APIView
@@ -87,6 +87,20 @@ class TestCaseViewSet(viewsets.ModelViewSet):
     ordering_fields = ["id", "title", "review_status",]
     ordering = ["id",]
 
+    def perform_create(self, serializer):
+        project_id = self.request.data.get("project_id")
+
+        if not project_id:
+            raise serializers.ValidationError({
+                "project_id": "Project là bắt buộc."
+            })
+
+        default_suite, _ = TestSuite.objects.get_or_create(
+            project_id=project_id,
+            name="Unassigned"
+        )
+
+        serializer.save(suite=default_suite)
     # Thêm action này vàoViewSet đang kích hoạt
     @action(detail=False, methods=["post"], url_path="commit-ai-generation")
     def commit_ai_generation(self, request):

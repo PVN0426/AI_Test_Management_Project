@@ -1,0 +1,516 @@
+{% extends 'base.html' %} {% load static %} {% block content %}
+
+<div class="min-h-screen bg-slate-50">
+  <!-- ============================= -->
+  <!-- PAGE HEADER -->
+  <!-- ============================= -->
+
+  <div class="px-6 py-6 border-b border-slate-200 bg-white">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <a
+            href="/projects/"
+            data-testid="testcase-list-link-projects"
+            class="text-sm text-slate-400 hover:text-indigo-600"
+          >
+            Projects
+          </a>
+
+          <i class="fa-solid fa-chevron-right text-xs text-slate-300"></i>
+
+          <span class="text-sm text-slate-500"> Test Cases </span>
+        </div>
+
+        <h1 class="text-2xl font-bold text-slate-900">Test Cases</h1>
+
+        <p class="mt-1 text-sm text-slate-500">
+          Manage and review your project's test cases.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        id="createTestCaseBtn"
+        data-testid="testcase-list-btn-create"
+        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition shadow-sm"
+      >
+        <i class="fa-solid fa-plus"></i>
+        Create Test Case
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================= -->
+  <!-- TOOLBAR -->
+  <!-- ============================= -->
+
+  <div class="px-6 py-5">
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm">
+      <div class="p-4 flex flex-col lg:flex-row gap-3">
+        <!-- Search -->
+
+        <div class="relative flex-1">
+          <i
+            class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          ></i>
+
+          <input
+            type="search"
+            id="searchTestCase"
+            data-testid="testcase-list-search"
+            placeholder="Search test cases..."
+            class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+          />
+        </div>
+
+        <!-- Review Status -->
+
+        <div class="relative">
+          <select
+            id="reviewStatusFilter"
+            data-testid="testcase-list-filter-review-status"
+            class="w-full lg:w-48 px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">All Status</option>
+
+            <option value="draft">Draft</option>
+
+            <option value="approved">Approved</option>
+          </select>
+        </div>
+
+        <!-- Refresh -->
+
+        <button
+          type="button"
+          id="refreshTestCasesBtn"
+          data-testid="testcase-list-btn-refresh"
+          class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition"
+          title="Refresh"
+        >
+          <i class="fa-solid fa-rotate"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================= -->
+    <!-- SELECTED ACTION BAR -->
+    <!-- ============================= -->
+
+    <div
+      id="selectedActionBar"
+      data-testid="testcase-list-selected-action-bar"
+      class="hidden mt-4 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 flex items-center justify-between"
+    >
+      <span
+        id="selectedCountText"
+        data-testid="testcase-list-selected-count"
+        class="text-sm font-medium text-indigo-700"
+      >
+        0 Test Cases Selected
+      </span>
+
+      <button
+        type="button"
+        id="deleteSelectedBtn"
+        data-testid="testcase-list-btn-delete-selected"
+        class="px-3 py-2 rounded-lg bg-rose-600 text-white text-sm hover:bg-rose-700 transition"
+      >
+        <i class="fa-solid fa-trash mr-1"></i>
+        Delete Selected
+      </button>
+    </div>
+
+    <!-- ============================= -->
+    <!-- TABLE -->
+    <!-- ============================= -->
+
+    <div
+      class="mt-5 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden"
+    >
+      <div class="overflow-x-auto">
+        <table
+          id="testCaseTable"
+          data-testid="testcase-list-table"
+          class="w-full text-sm"
+        >
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th class="px-4 py-3 text-center w-12">
+                <input
+                  type="checkbox"
+                  id="selectAllTestCases"
+                  data-testid="testcase-list-checkbox-select-all"
+                  class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+              </th>
+
+              <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                ID
+              </th>
+
+              <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                Title
+              </th>
+
+              <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                Priority
+              </th>
+
+              <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                Status
+              </th>
+              <th class="px-4 py-3 text-left font-semibold text-slate-600">
+  Test Result
+</th>
+              <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                Source
+              </th>
+
+              <th class="px-4 py-3 text-left font-semibold text-slate-600">
+                Steps
+              </th>
+
+              <th class="px-4 py-3 text-right font-semibold text-slate-600">
+                Actions
+              </th>
+            </tr>
+          </thead>
+
+          <tbody
+            id="testCaseTableBody"
+            data-testid="testcase-list-table-body"
+          ></tbody>
+        </table>
+      </div>
+
+      <!-- ============================= -->
+      <!-- LOADING -->
+      <!-- ============================= -->
+
+      <div
+        id="testCaseLoading"
+        data-testid="testcase-list-loading"
+        class="hidden py-12 text-center"
+      >
+        <i class="fa-solid fa-spinner fa-spin text-2xl text-indigo-600"></i>
+
+        <p class="mt-3 text-sm text-slate-500">Loading test cases...</p>
+      </div>
+
+      <!-- ============================= -->
+      <!-- EMPTY -->
+      <!-- ============================= -->
+
+      <div
+        id="testCaseEmpty"
+        data-testid="testcase-list-empty"
+        class="hidden py-14 text-center"
+      >
+        <div
+          class="w-14 h-14 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center"
+        >
+          <i class="fa-solid fa-vials text-xl text-slate-400"></i>
+        </div>
+
+        <h3 class="mt-4 font-semibold text-slate-700">No Test Cases Found</h3>
+
+        <p class="mt-1 text-sm text-slate-400">
+          There are no test cases matching your search.
+        </p>
+      </div>
+
+      <!-- ============================= -->
+      <!-- PAGINATION -->
+      <!-- ============================= -->
+
+      <div
+        id="testCasePagination"
+        data-testid="testcase-list-pagination"
+        class="hidden px-4 py-4 border-t border-slate-200 flex items-center justify-between"
+      >
+        <span
+          id="paginationInfo"
+          data-testid="testcase-list-pagination-info"
+          class="text-sm text-slate-500"
+        >
+          Showing 0-0 of 0
+        </span>
+
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            id="prevPageBtn"
+            data-testid="testcase-list-pagination-prev"
+            class="px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+          >
+            <i class="fa-solid fa-chevron-left"></i>
+          </button>
+
+          <span
+            id="pageNumber"
+            data-testid="testcase-list-pagination-page"
+            class="px-3 text-sm font-medium text-slate-600"
+          >
+            1 / 1
+          </span>
+
+          <button
+            type="button"
+            id="nextPageBtn"
+            data-testid="testcase-list-pagination-next"
+            class="px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+          >
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================= -->
+<!-- CREATE / EDIT MODAL -->
+<!-- ================================================= -->
+
+<div
+  id="testCaseFormModal"
+  data-testid="testcase-form-modal"
+  class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4"
+>
+  <div
+    class="w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-xl"
+  >
+    <div
+      class="px-6 py-5 border-b border-slate-200 flex items-center justify-between"
+    >
+      <div>
+        <h2 id="testCaseFormTitle" class="text-lg font-bold text-slate-900">
+          Create Test Case
+        </h2>
+
+        <p class="text-sm text-slate-500 mt-1">Create or update a test case.</p>
+      </div>
+
+      <button
+        type="button"
+        id="closeTestCaseFormBtn"
+        data-testid="testcase-form-btn-close"
+        class="w-9 h-9 rounded-lg hover:bg-slate-100 text-slate-500"
+      >
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <form id="testCaseForm" data-testid="testcase-form" class="p-6 space-y-5">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-2">
+          Title
+        </label>
+
+        <input
+          type="text"
+          id="testCaseTitle"
+          data-testid="testcase-form-inp-title"
+          required
+          class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          placeholder="Enter test case title"
+        />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-2">
+          Precondition
+        </label>
+
+        <textarea
+          id="testCasePrecondition"
+          data-testid="testcase-form-textarea-precondition"
+          rows="3"
+          class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          placeholder="Enter precondition"
+        ></textarea>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-2">
+          Priority
+        </label>
+
+        <select
+          id="testCasePriority"
+          data-testid="testcase-form-select-priority"
+          class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          <option value="low">Low</option>
+
+          <option value="medium" selected>Medium</option>
+
+          <option value="high">High</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-2">
+          Review Status
+        </label>
+
+        <select
+          id="testCaseReviewStatus"
+          data-testid="testcase-form-select-review-status"
+          class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          <option value="draft">Draft</option>
+
+          <option value="approved">Approved</option>
+        </select>
+    
+      </div>
+      <!-- STEPS -->
+
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-sm font-medium text-slate-700"> Test Steps </label>
+
+          <button
+            type="button"
+            id="addStepBtn"
+            data-testid="testcase-form-btn-add-step"
+            class="text-sm text-indigo-600 hover:text-indigo-700"
+          >
+            <i class="fa-solid fa-plus mr-1"></i>
+            Add Step
+          </button>
+        </div>
+
+        <div
+          id="stepsContainer"
+          data-testid="testcase-form-steps-container"
+          class="space-y-3"
+        ></div>
+      </div>
+
+      <div
+        id="testCaseFormError"
+        data-testid="testcase-form-error"
+        class="hidden p-3 rounded-lg bg-rose-50 text-rose-600 text-sm"
+      ></div>
+
+      <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
+        <button
+          type="button"
+          id="cancelTestCaseBtn"
+          data-testid="testcase-form-btn-cancel"
+          class="px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="submit"
+          id="saveTestCaseBtn"
+          data-testid="testcase-form-btn-submit"
+          class="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+        >
+          Save Test Case
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================================================= -->
+<!-- DETAIL MODAL -->
+<!-- ================================================= -->
+
+<div
+  id="testCaseDetailModal"
+  data-testid="testcase-detail-modal"
+  class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4"
+>
+  <div
+    class="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-xl"
+  >
+    <div
+      class="px-6 py-5 border-b border-slate-200 flex items-center justify-between"
+    >
+      <h2 id="detailTitle" class="text-lg font-bold text-slate-900">
+        Test Case Detail
+      </h2>
+
+      <button
+        type="button"
+        id="closeDetailBtn"
+        data-testid="testcase-detail-btn-close"
+        class="w-9 h-9 rounded-lg hover:bg-slate-100 text-slate-500"
+      >
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div
+      id="testCaseDetailContent"
+      data-testid="testcase-detail-content"
+      class="p-6"
+    ></div>
+  </div>
+</div>
+
+<!-- ================================================= -->
+<!-- DELETE CONFIRM MODAL -->
+<!-- ================================================= -->
+
+<div
+  id="deleteConfirmModal"
+  data-testid="testcase-delete-modal"
+  class="hidden fixed inset-0 z-[60] bg-slate-900/50 flex items-center justify-center p-4"
+>
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-6">
+    <div
+      class="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center"
+    >
+      <i class="fa-solid fa-trash"></i>
+    </div>
+
+    <h2 class="mt-4 text-lg font-bold text-slate-900">Delete Test Case</h2>
+
+    <p id="deleteConfirmMessage" class="mt-2 text-sm text-slate-500">
+      Are you sure you want to delete this test case?
+    </p>
+
+    <div class="mt-6 flex justify-end gap-3">
+      <button
+        type="button"
+        id="cancelDeleteBtn"
+        data-testid="testcase-delete-btn-cancel"
+        class="px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
+      >
+        Cancel
+      </button>
+
+      <button
+        type="button"
+        id="confirmDeleteBtn"
+        data-testid="testcase-delete-btn-confirm"
+        class="px-4 py-2.5 rounded-xl bg-rose-600 text-white text-sm hover:bg-rose-700"
+      >
+        Delete
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================= -->
+<!-- TOAST -->
+<!-- ================================================= -->
+
+<div
+  id="testCaseToast"
+  data-testid="testcase-list-toast"
+  class="hidden fixed right-6 bottom-6 z-[70] px-5 py-3 rounded-xl shadow-lg bg-slate-900 text-white text-sm"
+></div>
+<script src="{% static 'js/api.js' %}"></script>
+<script src="{% static 'js/test-cases.js' %}"></script>
+
+{% endblock %}
