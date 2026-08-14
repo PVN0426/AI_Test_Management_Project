@@ -15,6 +15,8 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from django.conf import settings
+from django.conf.urls.static import static
 from django.urls import path
 from django.urls import include
 from rest_framework.routers import DefaultRouter
@@ -33,6 +35,7 @@ urlpatterns = [
     path('api/', include(router.urls)),
     path('api/', include('apps.testcases.urls')),
     path('api/', include('apps.tenants.urls')),
+    path('api/', include('apps.bugs.urls')),
 
     #frontend
     path('', TemplateView.as_view(template_name='accounts/login.html'), name='login'),
@@ -42,3 +45,6 @@ urlpatterns = [
     path('projects/<int:project_id>/test-cases/', TemplateView.as_view(template_name='testcases/testcase_list.html'),name='project_test_cases'),
     
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
