@@ -1,34 +1,13 @@
 {% extends 'base.html' %} {% load static %} {% block content %}
-
 <div class="min-h-screen bg-slate-50">
-  <!-- ============================= -->
-  <!-- PAGE HEADER -->
-  <!-- ============================= -->
-
   <div class="px-6 py-6 border-b border-slate-200 bg-white">
     <div class="flex items-center justify-between gap-4">
       <div>
-        <div class="flex items-center gap-2 mb-1">
-          <a
-            href="/projects/"
-            data-testid="testcase-list-link-projects"
-            class="text-sm text-slate-400 hover:text-indigo-600"
-          >
-            Projects
-          </a>
-
-          <i class="fa-solid fa-chevron-right text-xs text-slate-300"></i>
-
-          <span class="text-sm text-slate-500"> Test Cases </span>
-        </div>
-
         <h1 class="text-2xl font-bold text-slate-900">Test Cases</h1>
-
         <p class="mt-1 text-sm text-slate-500">
           Manage and review your project's test cases.
         </p>
       </div>
-
       <button
         type="button"
         id="createTestCaseBtn"
@@ -48,13 +27,10 @@
   <div class="px-6 py-5">
     <div class="bg-white border border-slate-200 rounded-2xl shadow-sm">
       <div class="p-4 flex flex-col lg:flex-row gap-3">
-        <!-- Search -->
-
         <div class="relative flex-1">
           <i
             class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
           ></i>
-
           <input
             type="search"
             id="searchTestCase"
@@ -63,9 +39,6 @@
             class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
           />
         </div>
-
-        <!-- Review Status -->
-
         <div class="relative">
           <select
             id="reviewStatusFilter"
@@ -94,10 +67,6 @@
       </div>
     </div>
 
-    <!-- ============================= -->
-    <!-- SELECTED ACTION BAR -->
-    <!-- ============================= -->
-
     <div
       id="selectedActionBar"
       data-testid="testcase-list-selected-action-bar"
@@ -121,11 +90,6 @@
         Delete Selected
       </button>
     </div>
-
-    <!-- ============================= -->
-    <!-- TABLE -->
-    <!-- ============================= -->
-
     <div
       class="mt-5 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden"
     >
@@ -137,7 +101,7 @@
         >
           <thead class="bg-slate-50 border-b border-slate-200">
             <tr>
-              <th class="px-4 py-3 text-center w-12">
+              <th class="px-4 py-3 text-center w-12 qc-only-testcase">
                 <input
                   type="checkbox"
                   id="selectAllTestCases"
@@ -162,8 +126,8 @@
                 Status
               </th>
               <th class="px-4 py-3 text-left font-semibold text-slate-600">
-  Test Result
-</th>
+                Test Result
+              </th>
               <th class="px-4 py-3 text-left font-semibold text-slate-600">
                 Source
               </th>
@@ -365,7 +329,6 @@
 
           <option value="approved">Approved</option>
         </select>
-    
       </div>
       <!-- STEPS -->
 
@@ -420,10 +383,6 @@
   </div>
 </div>
 
-<!-- ================================================= -->
-<!-- DETAIL MODAL -->
-<!-- ================================================= -->
-
 <div
   id="testCaseDetailModal"
   data-testid="testcase-detail-modal"
@@ -456,11 +415,6 @@
     ></div>
   </div>
 </div>
-
-<!-- ================================================= -->
-<!-- DELETE CONFIRM MODAL -->
-<!-- ================================================= -->
-
 <div
   id="deleteConfirmModal"
   data-testid="testcase-delete-modal"

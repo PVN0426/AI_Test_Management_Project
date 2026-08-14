@@ -81,12 +81,33 @@ class TestSuiteViewSet(viewsets.ModelViewSet):
 class TestCaseViewSet(viewsets.ModelViewSet):
     queryset = TestCase.objects.all()
     serializer_class = TestCaseSerializer
+    permission_classes = [IsAuthenticated, IsQCForWriteOrReadOnlyInline]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter,]
     filterset_fields = ["review_status",]
     search_fields = ["title", "precondition",]
     ordering_fields = ["id", "title", "review_status",]
     ordering = ["id",]
 
+    def get_queryset(self):
+        queryset = TestCase.objects.select_related(
+            "suite__project"
+        ).prefetch_related("steps")
+
+        user = self.request.user
+        if not user.is_superuser:
+            if not user.tenant_id:
+                return TestCase.objects.none()
+
+            queryset = queryset.filter(
+                suite__project__tenant_id=user.tenant_id
+            )
+        project_id = self.request.query_params.get("project_id")
+        if project_id:
+            queryset = queryset.filter(
+                suite__project_id=project_id
+            )
+
+        return queryset
     def perform_create(self, serializer):
         project_id = self.request.data.get("project_id")
 
@@ -95,8 +116,31 @@ class TestCaseViewSet(viewsets.ModelViewSet):
                 "project_id": "Project là bắt buộc."
             })
 
+        try:
+            project = Project.objects.get(id=project_id)
+        except Project.DoesNotExist:
+            raise serializers.ValidationError({
+                "project_id": "Project không tồn tại."
+            })
+
+        user = self.request.user
+
+        # Kiểm tra tenant
+        if not user.is_superuser:
+            tenant = (
+                getattr(self.request, "tenant", None)
+                or getattr(user, "tenant", None)
+            )
+            if tenant is None:
+                raise permissions.PermissionDenied(
+                    "User chưa được gán tenant."
+                )
+            if project.tenant_id != tenant.id:
+                raise permissions.PermissionDenied(
+                    "Bạn không có quyền tạo Test Case cho project này."
+                )
         default_suite, _ = TestSuite.objects.get_or_create(
-            project_id=project_id,
+            project=project,
             name="Unassigned"
         )
 
