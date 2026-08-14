@@ -1,9 +1,11 @@
-from rest_framework import generics, status
+from rest_framework import generics, status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import Requirement, TestCase
-from .serializers import RequirementSerializer, TestCaseSerializer
+from rest_framework.decorators import action
+from .models import Project, Requirement, TestCase, TestSuite
+from .serializers import RequirementSerializer, TestCaseSerializer, TestSuiteSerializer
+from django.shortcuts import get_object_or_404
 
 
 class ProjectRequirementListCreateAPIView(
@@ -92,7 +94,37 @@ class RequirementUploadAPIView(APIView):
             serializer.data,
             status=status.HTTP_201_CREATED
         )
+    
+class TestSuiteViewSet(viewsets.ModelViewSet):
+    serializer_class = TestSuiteSerializer
+    queryset = TestSuite.objects.all()
 
+    def get_queryset(self):
+        queryset = TestSuite.objects.all()
+        project_id = self.request.query_params.get("project_id")
+
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
+
+        return queryset
+
+    def perform_create(self, serializer):
+        project = get_object_or_404(
+            Project,
+            pk=self.kwargs["project_id"]
+        )
+
+        serializer.save(
+            project=project,
+            created_by=self.request.user
+        )
+
+    @action(detail=True, methods=["get"])
+    def cases(self, request, pk=None):
+        suite = self.get_object()
+        serializer = TestCaseSerializer(suite.test_cases.all(), many=True)
+        return Response(serializer.data)
+    
 class TestCaseListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = TestCaseSerializer
 
