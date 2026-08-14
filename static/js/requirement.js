@@ -1,3 +1,12 @@
+let aiPreviewModal;
+let aiPreviewContent;
+let aiPreviewCount;
+let saveAIDraftBtn;
+let confirmAISaveBtn;
+let generatedTestCases = [];
+let generatedJobId = null;
+let currentProjectId = null;
+
 document.addEventListener("DOMContentLoaded", function () {
   const reqFileInput = document.getElementById("reqFile");
 
@@ -40,21 +49,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const aiGeneratingCount = document.getElementById("aiGeneratingCount");
 
-  const aiPreviewModal = document.getElementById("aiPreviewModal");
+  aiPreviewModal = document.getElementById("aiPreviewModal");
 
-  const aiPreviewContent = document.getElementById("aiPreviewContent");
+  aiPreviewContent = document.getElementById("aiPreviewContent");
 
-  const aiPreviewCount = document.getElementById("aiPreviewCount");
+  aiPreviewCount = document.getElementById("aiPreviewCount");
 
   const closeAIPreviewBtn = document.getElementById("closeAIPreviewBtn");
+  if (closeAIPreviewBtn) {
+    closeAIPreviewBtn.addEventListener("click", function () {
+      aiPreviewModal.classList.add("hidden");
+    });
+  }
 
-  const saveAIDraftBtn = document.getElementById("saveAIDraftBtn");
+  saveAIDraftBtn = document.getElementById("saveAIDraftBtn");
 
-  const confirmAISaveBtn = document.getElementById("confirmAISaveBtn");
-
-  let generatedTestCases = [];
-
-  let generatedJobId = null;
+  confirmAISaveBtn = document.getElementById("confirmAISaveBtn");
   // ==========================================
   // ROLE
   // ==========================================
@@ -77,7 +87,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const projectIdIndex = pathParts.indexOf("projects") + 1;
 
-  const currentProjectId =
+  currentProjectId =
     projectIdIndex > 0 ? pathParts[projectIdIndex] : null;
 
   // ==========================================
@@ -739,6 +749,18 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
   };
+
+  if (saveAIDraftBtn) {
+    saveAIDraftBtn.addEventListener("click", function () {
+      commitAIGeneration("draft");
+    });
+  }
+
+  if (confirmAISaveBtn) {
+    confirmAISaveBtn.addEventListener("click", function () {
+      commitAIGeneration("approved");
+    });
+  }
 });
 
 function renderAIGeneratedTestCases(testCases) {
@@ -873,16 +895,6 @@ function openAIPreviewModal(testCases, jobId) {
 // COMMIT AI GENERATION
 // ==========================================
 
-if (saveAIDraftBtn) {
-  saveAIDraftBtn.addEventListener("click", function () {
-    commitAIGeneration("draft");
-  });
-}
-if (confirmAISaveBtn) {
-  confirmAISaveBtn.addEventListener("click", function () {
-    commitAIGeneration("approved");
-  });
-}
 // ==========================================
 // COMMIT AI GENERATION API
 // ==========================================
