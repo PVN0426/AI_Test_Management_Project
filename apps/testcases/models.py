@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from apps.tenants.models import Tenant
 
 class Project(models.Model):
@@ -41,28 +42,77 @@ class Requirement(models.Model):
         return self.ref
 
 class TestSuite(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, verbose_name="Project")
-    name = models.CharField(max_length=255, verbose_name="Suite Name")
-    parent = models.ForeignKey(
-        "self", on_delete=models.CASCADE, null=True, blank=True, 
-        related_name="subsuites", verbose_name="Parent Suite"
+    PRIORITY_CHOICES = (
+        ("p1", "P1 - Critical"),
+        ("p2", "P2 - High"),
+        ("p3", "P3 - Medium"),
+        ("p4", "P4 - Low"),
     )
+
+    TEST_TYPE_CHOICES = (
+        ("manual", "Manual"),
+        ("automated", "Automated"),
+    )
+
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name="test_suites"
+    )
+
+    name = models.CharField(max_length=255)
+
+    precondition = models.TextField(
+    blank=True,
+    default="",
+    verbose_name="Preconditions"
+    )
+
+    priority = models.CharField(
+        max_length=10,
+        choices=PRIORITY_CHOICES,
+        default="p3"
+    )
+
+    test_type = models.CharField(
+        max_length=20,
+        choices=TEST_TYPE_CHOICES,
+        default="manual"
+    )
+
+    estimate_time = models.CharField(
+        max_length=50,
+        blank=True,
+        default=""
+    )
+
+    requirement_ref = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text="Requirement ID, ví dụ REQ-101"
+    )
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "test_suite"
-        verbose_name = "Test Suite"
-        verbose_name_plural = "Test Suites"
-
-    def __str__(self):
-        return self.name
-
+        unique_together = ("project", "name")
 
 class TestCase(models.Model):
     PRIORITY_CHOICES = (("critical", "Critical"), ("high", "High"), ("medium", "Medium"), ("low", "Low"),)
     REVIEW_STATUS_CHOICES = (("draft", "Draft"), ("approved", "Approved"),)
     TEST_RESULT_CHOICES = (("not_run", "Not Run"), ("passed", "Passed"), ("failed", "Failed"), ("skipped", "Skipped"), ("blocked", "Blocked"),)
     SOURCE_CHOICES = (("manual", "Manual"), ("ai", "AI"),)
-    suite = models.ForeignKey(TestSuite, on_delete=models.CASCADE, verbose_name="Test Suite")
+    suite = models.ForeignKey(TestSuite, on_delete=models.CASCADE, related_name="test_cases", verbose_name="Test Suite")
     requirements = models.ManyToManyField(Requirement, related_name="test_cases", blank=True, verbose_name="Linked Requirements")
     title = models.CharField(max_length=255, verbose_name="Test Case Title")
     precondition = models.TextField(blank=True, default="", verbose_name="Precondition")
