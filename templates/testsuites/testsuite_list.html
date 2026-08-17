@@ -1,0 +1,523 @@
+{% extends 'base.html' %} {% load static %} {% block content %}
+
+<div class="min-h-full bg-slate-50">
+  <header class="border-b border-slate-200 bg-white">
+    <div class="px-6 py-6">
+      <div
+        class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"
+      >
+        <div>
+          <div class="flex items-center gap-3">
+            <div>
+              <h1 class="text-2xl font-bold text-slate-950">Test Suites</h1>
+              <p class="mt-1 text-sm text-slate-500">
+                Group approved test cases into focused execution suites.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button
+            type="button"
+            id="selectTestCasesBtn"
+            data-testid="testsuite-page-btn-select-cases"
+            class="qc-only-action inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-white px-4 text-sm font-semibold text-indigo-700 shadow-sm transition hover:bg-indigo-50"
+          >
+            <i class="fa-solid fa-list-check"></i>
+            Select Test Cases
+          </button>
+          <button
+            type="button"
+            id="createSuiteBtn"
+            data-testid="testsuite-page-btn-create-suite"
+            class="qc-only-action inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+          >
+            <i class="fa-solid fa-plus"></i>
+            Create Test Suite
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <section class="px-6 py-6">
+    <section class="border border-slate-200 bg-white p-4 shadow-sm rounded-lg">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div class="relative min-w-0 flex-1">
+          <i
+            class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400"
+          ></i>
+          <input
+            type="search"
+            id="searchSuiteInput"
+            data-testid="testsuite-page-search-suite"
+            placeholder="Search test suites..."
+            class="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          />
+        </div>
+        <button
+          type="button"
+          id="refreshSuitesBtn"
+          data-testid="testsuite-page-btn-refresh"
+          class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+          title="Refresh test suites"
+        >
+          <i class="fa-solid fa-rotate"></i>
+        </button>
+      </div>
+    </section>
+    <div
+      id="suiteLoading"
+      data-testid="testsuite-page-loading"
+      class="hidden py-20 text-center"
+    >
+      <i class="fa-solid fa-spinner fa-spin text-2xl text-indigo-600"></i>
+      <p class="mt-3 text-sm text-slate-500">Loading test suites...</p>
+    </div>
+    <section
+      id="suiteError"
+      data-testid="testsuite-page-alert-load-error"
+      class="hidden mt-6 border border-rose-200 bg-rose-50 p-5 rounded-lg"
+    >
+      <div class="flex items-start gap-3">
+        <span
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-600"
+        >
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </span>
+        <div>
+          <h2 class="font-semibold text-rose-900">
+            Unable to load test suites
+          </h2>
+          <p id="suiteErrorMessage" class="mt-1 text-sm text-rose-700"></p>
+        </div>
+      </div>
+    </section>
+    <section
+      id="suiteEmpty"
+      data-testid="testsuite-page-empty-state"
+      class="hidden mt-6 border border-dashed border-slate-300 bg-white px-6 py-16 text-center rounded-lg"
+    >
+      <span
+        class="mx-auto flex h-14 w-14 items-center justify-center rounded-lg bg-indigo-50 text-xl text-indigo-600"
+      >
+        <i class="fa-solid fa-layer-group"></i>
+      </span>
+      <h2 class="mt-5 text-lg font-semibold text-slate-900">
+        No test suites yet
+      </h2>
+      <p class="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
+        Create a suite, then select approved test cases and add them to it.
+      </p>
+      <button
+        type="button"
+        id="emptyCreateSuiteBtn"
+        class="qc-only-action mt-6 inline-flex h-10 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+      >
+        <i class="fa-solid fa-plus"></i>
+        Create first suite
+      </button>
+    </section>
+    <section
+      id="suiteList"
+      data-testid="testsuite-page-list"
+      class="hidden mt-6 space-y-3"
+    ></section>
+  </section>
+</div>
+<div
+  id="suiteFormModal"
+  data-testid="testsuite-page-modal-suite-form"
+  class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4"
+>
+  <div class="w-full max-w-lg overflow-hidden rounded-lg bg-white shadow-2xl">
+    <div
+      class="flex items-start justify-between border-b border-slate-200 px-6 py-5"
+    >
+      <div>
+        <p
+          class="text-xs font-semibold uppercase tracking-wide text-indigo-600"
+        >
+          Test Suite
+        </p>
+        <h2 id="suiteFormTitle" class="mt-1 text-lg font-bold text-slate-950">
+          Create Test Suite
+        </h2>
+        <p class="mt-1 text-sm text-slate-500">
+          Create a suite before assigning test cases.
+        </p>
+      </div>
+      <button
+        type="button"
+        id="closeSuiteFormBtn"
+        data-testid="testsuite-page-btn-close-suite-form"
+        class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+      >
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <form
+      id="suiteForm"
+      data-testid="testsuite-page-form-suite"
+      class="px-6 py-6"
+    >
+      {% csrf_token %}
+      <label
+        for="suiteNameInput"
+        class="block text-sm font-semibold text-slate-800"
+      >
+        Suite name
+      </label>
+      <input
+        type="text"
+        id="suiteNameInput"
+        data-testid="testsuite-page-form-inp-suite-name"
+        required
+        maxlength="255"
+        placeholder="Example: Authentication Regression"
+        class="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+      />
+      <p class="mt-2 text-xs leading-5 text-slate-500">
+        Use a name that describes the test execution scope.
+      </p>
+      <div
+        id="suiteFormError"
+        data-testid="testsuite-page-form-error"
+        class="hidden mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
+      ></div>
+      <div class="mt-6 flex justify-end gap-3 border-t border-slate-200 pt-5">
+        <button
+          type="button"
+          id="cancelSuiteFormBtn"
+          data-testid="testsuite-page-btn-cancel-suite-form"
+          class="h-10 rounded-lg border border-slate-200 px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          id="saveSuiteBtn"
+          data-testid="testsuite-page-btn-save-suite"
+          class="h-10 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Create Suite
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+<div
+  id="selectCasesModal"
+  data-testid="testsuite-page-modal-select-cases"
+  class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-4 translate-x-[100px]"
+>
+  <div
+    class="flex max-h-[95vh] w-full max-w-6xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl"
+  >
+    <div
+      class="flex items-center justify-between border-b border-slate-200 px-6 py-5"
+    >
+      <div class="flex items-center gap-3">
+        <span
+          class="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600"
+        >
+          <i class="fa-solid fa-list-check"></i>
+        </span>
+        <div>
+          <h2 class="text-xl font-bold text-slate-950">
+            Select Approved Test Cases for Suite
+          </h2>
+          <p class="mt-1 text-sm text-slate-500">
+            Select test cases and assign them to a target suite.
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        id="closeSelectCasesBtn"
+        data-testid="testsuite-page-btn-close-select-cases"
+        class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+      >
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="min-h-0 flex-1 overflow-hidden p-5">
+      <div
+        class="grid h-full min-h-0 grid-cols-1 gap-5 lg:grid-cols-[240px_minmax(0,1fr)]"
+      >
+        <aside class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p
+            class="text-xs font-semibold uppercase tracking-wide text-slate-400"
+          >
+            Filters
+          </p>
+          <div class="mt-5">
+            <label class="block text-sm font-medium text-slate-600">
+              Requirement
+            </label>
+            <select
+              id="caseRequirementFilter"
+              data-testid="testsuite-page-filter-requirement"
+              class="mt-2 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            >
+              <option value="">All</option>
+            </select>
+          </div>
+          <!-- PRIORITY -->
+          <div class="mt-5">
+            <label class="block text-sm font-medium text-slate-600">
+              Priority
+            </label>
+            <select
+              id="casePriorityFilter"
+              data-testid="testsuite-page-filter-priority"
+              class="mt-2 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            >
+              <option value="">All</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div class="mt-5">
+            <label class="block text-sm font-medium text-slate-600">
+              Target Suite
+            </label>
+            <select
+              id="targetSuiteSelect"
+              data-testid="testsuite-page-select-target-suite"
+              class="mt-2 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            >
+              <option value="">Select suite</option>
+            </select>
+            <p class="mt-2 text-xs text-slate-400">
+              Choose the suite that will receive the selected test cases.
+            </p>
+          </div>
+          <div
+            class="mt-5 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700"
+          >
+            <i class="fa-regular fa-circle-check"></i>
+            Showing Approved only
+          </div>
+        </aside>
+        <section class="min-h-0 flex flex-col">
+          <!-- SEARCH -->
+          <div class="relative">
+            <i
+              class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            ></i>
+
+            <input
+              type="search"
+              id="caseSearchInput"
+              data-testid="testsuite-page-search-test-case"
+              placeholder="Search by Case ID or Title..."
+              class="h-11 w-full rounded-lg border border-slate-200 pl-10 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            />
+          </div>
+
+          <!-- TABLE -->
+
+          <div
+            class="mt-3 min-h-0 flex-1 overflow-y-auto max-h-[55vh] rounded-lg border border-slate-200"
+          >
+            <div>
+              <table
+                data-testid="testsuite-page-table-test-cases"
+                class="w-full text-sm"
+              >
+                <thead
+                  class="sticky top-0 z-10 border-b border-slate-200 bg-slate-50"
+                >
+                  <tr>
+                    <th class="w-12 px-4 py-3 text-left">
+                      <input
+                        type="checkbox"
+                        id="selectAllCases"
+                        data-testid="testsuite-page-checkbox-select-all"
+                        class="rounded border-slate-300"
+                      />
+                    </th>
+
+                    <th
+                      class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500"
+                    >
+                      Case ID
+                    </th>
+
+                    <th
+                      class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500"
+                    >
+                      Title
+                    </th>
+
+                    <th
+                      class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500"
+                    >
+                      Priority
+                    </th>
+
+                    <th
+                      class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500"
+                    >
+                      Req
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody
+                  id="selectCasesBody"
+                  data-testid="testsuite-page-table-test-cases-body"
+                ></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+
+    <div
+      class="flex items-center justify-between border-t border-slate-200 px-6 py-4"
+    >
+      <div
+        id="selectedCasesCount"
+        data-testid="testsuite-page-selected-cases-count"
+        class="text-sm font-medium text-slate-700"
+      >
+        0 Cases Selected
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button
+          type="button"
+          id="cancelSelectCasesBtn"
+          data-testid="testsuite-page-btn-cancel-select-cases"
+          class="h-11 rounded-lg border border-slate-200 px-5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          id="addSelectedCasesBtn"
+          data-testid="testsuite-page-btn-add-selected-cases"
+          disabled
+          class="h-11 rounded-lg bg-indigo-600 px-5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+        >
+          <i class="fa-solid fa-plus mr-1"></i>
+          Add Selected Cases to Suite
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div
+  id="suiteDetailModal"
+  data-testid="testsuite-page-modal-suite-detail"
+  class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 pl-56"
+>
+  <div
+    class="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl"
+  >
+    <div
+      class="flex items-center justify-between border-b border-slate-200 px-6 py-5"
+    >
+      <div class="flex items-center gap-3">
+        <span
+          class="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600"
+        >
+          <i class="fa-solid fa-layer-group"></i>
+        </span>
+
+        <div>
+          <p
+            class="text-xs font-semibold uppercase tracking-wide text-indigo-600"
+          >
+            Test Suite
+          </p>
+
+          <h2 id="suiteDetailTitle" class="text-lg font-bold text-slate-950">
+            Test Suite
+          </h2>
+
+          <p id="suiteDetailSubtitle" class="mt-1 text-sm text-slate-500">
+            Test cases in this suite
+          </p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        id="closeSuiteDetailBtn"
+        data-testid="testsuite-page-btn-close-suite-detail"
+        class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+      >
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div
+      id="suiteTestCasesContent"
+      data-testid="testsuite-page-suite-detail-content"
+      class="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-6"
+    ></div>
+  </div>
+</div>
+
+<!-- ===================================================== -->
+<!-- DELETE -->
+<!-- ===================================================== -->
+<div
+  id="deleteSuiteModal"
+  data-testid="testsuite-page-modal-delete-suite"
+  class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/45 p-4"
+>
+  <div class="w-full max-w-md rounded-lg bg-white p-6 text-center shadow-2xl">
+    <span
+      class="mx-auto flex h-11 w-11 items-center justify-center rounded-lg bg-rose-50 text-rose-600"
+    >
+      <i class="fa-solid fa-trash"></i>
+    </span>
+    <h2 class="mt-4 text-lg font-bold text-slate-950">Delete Test Suite</h2>
+    <p
+      id="deleteSuiteMessage"
+      data-testid="testsuite-page-delete-message"
+      class="mt-2 text-sm leading-6 text-slate-500"
+    >
+      Are you sure you want to delete this suite?
+    </p>
+
+    <div class="mt-6 flex justify-end gap-3">
+      <button
+        type="button"
+        id="cancelDeleteSuiteBtn"
+        data-testid="testsuite-page-btn-cancel-delete"
+        class="h-10 rounded-lg border border-slate-200 px-4 text-sm font-medium"
+      >
+        Cancel
+      </button>
+
+      <button
+        type="button"
+        id="confirmDeleteSuiteBtn"
+        data-testid="testsuite-page-btn-confirm-delete"
+        class="h-10 rounded-lg bg-rose-600 px-4 text-sm font-semibold text-white"
+      >
+        Delete Suite
+      </button>
+    </div>
+  </div>
+</div>
+<div
+  id="suiteToast"
+  data-testid="testsuite-page-toast"
+  class="hidden fixed bottom-6 right-6 z-[70] rounded-lg px-5 py-3 text-sm text-white shadow-lg"
+></div>
+
+<script src="{% static 'js/api.js' %}"></script>
+<script src="{% static 'js/test-suites.js' %}"></script>
+
+{% endblock %}

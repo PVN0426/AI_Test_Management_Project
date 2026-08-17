@@ -161,7 +161,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Redirect URLs sau khi đăng nhập / đăng xuất
 LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/testcases/'
+LOGIN_REDIRECT_URL = '/projects/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 REST_FRAMEWORK = {
