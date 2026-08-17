@@ -22,6 +22,7 @@ from django.urls import include
 from rest_framework.routers import DefaultRouter
 from django.views.generic import TemplateView
 from apps.accounts.views import UserManagementViewSet
+from django.views.generic import RedirectView
 
 
 router = DefaultRouter()
@@ -40,7 +41,7 @@ urlpatterns = [
 
     #frontend
     path('', TemplateView.as_view(template_name='accounts/login.html'), name='login'),
-    path('dashboard/', TemplateView.as_view(template_name='dashboard/dashboard.html'), name='dashboard'),
+    path('dashboard/', RedirectView.as_view(url='/projects/', permanent=False)),
     path('projects/', TemplateView.as_view(template_name='projects/project_list.html'), name='project_list'),
     path('projects/<int:project_id>/requirements/', TemplateView.as_view(template_name='requirements/requirements_list.html'), name='project_requirements'),
     path('projects/<int:project_id>/test-cases/', TemplateView.as_view(template_name='testcases/testcase_list.html'),name='project_test_cases'),

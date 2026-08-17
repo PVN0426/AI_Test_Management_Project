@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.user && data.user.role) {
                     localStorage.setItem('user_role', data.user.role);
                 }
-                window.location.href = '/dashboard/'; 
+                window.location.href = '/projects/'; 
             } else {
                 errorMessage.textContent = data.detail || data.non_field_errors?.[0] || 'Tên đăng nhập hoặc mật khẩu không chính xác!';
                 errorBox.classList.remove('hidden');

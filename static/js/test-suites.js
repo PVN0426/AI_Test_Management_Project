@@ -1,1744 +1,1098 @@
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
+  const match = window.location.pathname.match(
+    /\/projects\/(\d+)\/test-suites\/?/,
+  );
 
-    // =====================================================
-    // CURRENT PROJECT
-    // =====================================================
+  let projectId = match?.[1];
+  if (projectId) {
+    localStorage.setItem("current_project_id", projectId);
+  } else {
+    projectId = localStorage.getItem("current_project_id");
+  }
 
-    const pathParts = window.location.pathname.split("/");
+  if (!projectId) {
+    console.error("No project ID found.");
+  }
+  const currentRole = (localStorage.getItem("user_role") || "")
+    .trim()
+    .toLowerCase();
+  const canManageSuites = currentRole === "qc" || currentRole === "superuser";
+  const createSuiteBtn = document.getElementById("createSuiteBtn");
+  const emptyCreateSuiteBtn = document.getElementById("emptyCreateSuiteBtn");
+  const selectTestCasesBtn = document.getElementById("selectTestCasesBtn");
+  const refreshSuitesBtn = document.getElementById("refreshSuitesBtn");
+  const searchSuiteInput = document.getElementById("searchSuiteInput");
+  const suiteLoading = document.getElementById("suiteLoading");
+  const suiteError = document.getElementById("suiteError");
+  const suiteErrorMessage = document.getElementById("suiteErrorMessage");
+  const suiteEmpty = document.getElementById("suiteEmpty");
+  const suiteList = document.getElementById("suiteList");
+  const suiteFormModal = document.getElementById("suiteFormModal");
+  const suiteForm = document.getElementById("suiteForm");
+  const suiteFormTitle = document.getElementById("suiteFormTitle");
+  const suiteNameInput = document.getElementById("suiteNameInput");
+  const suiteFormError = document.getElementById("suiteFormError");
+  const saveSuiteBtn = document.getElementById("saveSuiteBtn");
+  const closeSuiteFormBtn = document.getElementById("closeSuiteFormBtn");
+  const cancelSuiteFormBtn = document.getElementById("cancelSuiteFormBtn");
+  const selectCasesModal = document.getElementById("selectCasesModal");
+  const closeSelectCasesBtn = document.getElementById("closeSelectCasesBtn");
+  const cancelSelectCasesBtn = document.getElementById("cancelSelectCasesBtn");
+  const caseRequirementFilter = document.getElementById(
+    "caseRequirementFilter",
+  );
+  const casePriorityFilter = document.getElementById("casePriorityFilter");
+  const targetSuiteSelect = document.getElementById("targetSuiteSelect");
+  const caseSearchInput = document.getElementById("caseSearchInput");
+  const selectAllCases = document.getElementById("selectAllCases");
+  const selectCasesBody = document.getElementById("selectCasesBody");
+  const selectedCasesCount = document.getElementById("selectedCasesCount");
+  const addSelectedCasesBtn = document.getElementById("addSelectedCasesBtn");
+  const suiteDetailModal = document.getElementById("suiteDetailModal");
 
-    const projectIndex = pathParts.indexOf("projects");
+  const suiteDetailTitle = document.getElementById("suiteDetailTitle");
 
-    const currentProjectId =
-        projectIndex !== -1
-            ? Number(pathParts[projectIndex + 1])
-            : null;
+  const suiteDetailSubtitle = document.getElementById("suiteDetailSubtitle");
 
+  const suiteTestCasesContent = document.getElementById(
+    "suiteTestCasesContent",
+  );
 
-    // =====================================================
-    // ROLE
-    // =====================================================
+  const closeSuiteDetailBtn = document.getElementById("closeSuiteDetailBtn");
+  const deleteSuiteModal = document.getElementById("deleteSuiteModal");
+  const deleteSuiteMessage = document.getElementById("deleteSuiteMessage");
+  const cancelDeleteSuiteBtn = document.getElementById("cancelDeleteSuiteBtn");
+  const confirmDeleteSuiteBtn = document.getElementById(
+    "confirmDeleteSuiteBtn",
+  );
+  const suiteToast = document.getElementById("suiteToast");
+  let suites = [];
+  let allTestCases = [];
+  let filteredTestCases = [];
+  let selectedCaseIds = new Set();
+  let editingSuiteId = null;
+  let deletingSuiteId = null;
+  if (!projectId) {
+    showError("Select a project before opening Test Suites.");
+    return;
+  }
+  if (!canManageSuites) {
+    if (createSuiteBtn) {
+      createSuiteBtn.classList.add("hidden");
+      createSuiteBtn.style.display = "none";
+    }
+    if (emptyCreateSuiteBtn) {
+      emptyCreateSuiteBtn.classList.add("hidden");
+      emptyCreateSuiteBtn.style.display = "none";
+    }
+    if (selectTestCasesBtn) {
+      selectTestCasesBtn.classList.add("hidden");
+      selectTestCasesBtn.style.display = "none";
+    }
+  }
+  function getCookie(name) {
+    const cookies = document.cookie.split(";").map((cookie) => cookie.trim());
 
-    const currentRole =
-        localStorage.getItem("user_role") || "";
+    const cookie = cookies.find((cookie) => cookie.startsWith(`${name}=`));
 
-    const canManageSuites =
-        currentRole === "qc";
+    return cookie
+      ? decodeURIComponent(cookie.substring(name.length + 1))
+      : null;
+  }
+  function getCSRFToken() {
+    const cookieToken = getCookie("csrftoken");
 
+    if (cookieToken) {
+      return cookieToken;
+    }
+    const csrfInput = document.querySelector("[name=csrfmiddlewaretoken]");
+    return csrfInput?.value || "";
+  }
+  async function apiFetch(url, options = {}) {
+    const method = (options.method || "GET").toUpperCase();
+    const accessToken = localStorage.getItem("access_token");
 
-    // =====================================================
-    // ELEMENTS
-    // =====================================================
+    const headers = {
+      Accept: "application/json",
+      ...(options.headers || {}),
+    };
 
-    const suiteList =
-        document.getElementById("suiteList");
-
-    const suiteLoading =
-        document.getElementById("suiteLoading");
-
-    const suiteEmpty =
-        document.getElementById("suiteEmpty");
-
-    const suiteError =
-        document.getElementById("suiteError");
-
-    const suiteErrorMessage =
-        document.getElementById("suiteErrorMessage");
-
-    const searchInput =
-        document.getElementById("searchSuiteInput");
-
-    const refreshBtn =
-        document.getElementById("refreshSuitesBtn");
-
-    const createBtn =
-        document.getElementById("createSuiteBtn");
-
-    const emptyCreateBtn =
-        document.getElementById("emptyCreateSuiteBtn");
-
-
-    // =====================================================
-    // FORM
-    // =====================================================
-
-    const formModal =
-        document.getElementById("suiteFormModal");
-
-    const form =
-        document.getElementById("suiteForm");
-
-    const formTitle =
-        document.getElementById("suiteFormTitle");
-
-    const suiteNameInput =
-        document.getElementById("suiteNameInput");
-
-    const closeFormBtn =
-        document.getElementById("closeSuiteFormBtn");
-
-    const cancelFormBtn =
-        document.getElementById("cancelSuiteFormBtn");
-
-    const saveBtn =
-        document.getElementById("saveSuiteBtn");
-
-    const formError =
-        document.getElementById("suiteFormError");
-
-
-    // =====================================================
-    // DETAIL
-    // =====================================================
-
-    const detailModal =
-        document.getElementById("suiteDetailModal");
-
-    const detailTitle =
-        document.getElementById("suiteDetailTitle");
-
-    const detailSubtitle =
-        document.getElementById("suiteDetailSubtitle");
-
-    const detailContent =
-        document.getElementById("suiteTestCasesContent");
-
-    const closeDetailBtn =
-        document.getElementById("closeSuiteDetailBtn");
-
-
-    // =====================================================
-    // DELETE
-    // =====================================================
-
-    const deleteModal =
-        document.getElementById("deleteSuiteModal");
-
-    const deleteMessage =
-        document.getElementById("deleteSuiteMessage");
-
-    const cancelDeleteBtn =
-        document.getElementById("cancelDeleteSuiteBtn");
-
-    const confirmDeleteBtn =
-        document.getElementById("confirmDeleteSuiteBtn");
-
-
-    // =====================================================
-    // STATE
-    // =====================================================
-
-    let allSuites = [];
-
-    let filteredSuites = [];
-
-    let editingSuiteId = null;
-
-    let deletingSuiteId = null;
-
-
-    // =====================================================
-    // CHECK PROJECT
-    // =====================================================
-
-    if (!currentProjectId) {
-
-        showToast(
-            "Không xác định được Project.",
-            true
-        );
-
-        return;
+    if (accessToken) {
+      headers["Authorization"] = `Bearer ${accessToken}`;
     }
 
+    if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
+      headers["Content-Type"] = "application/json";
 
-    // =====================================================
-    // ROLE UI
-    // =====================================================
+      const csrfToken = getCSRFToken();
 
-    if (!canManageSuites) {
-
-        if (createBtn) {
-            createBtn.classList.add("hidden");
-        }
-
-        if (emptyCreateBtn) {
-            emptyCreateBtn.classList.add("hidden");
-        }
+      if (csrfToken) {
+        headers["X-CSRFToken"] = csrfToken;
+      }
     }
 
+    const response = await fetch(url, {
+      credentials: "include",
+      ...options,
+      headers,
+    });
 
-    // =====================================================
-    // API REQUEST
-    // =====================================================
+    const data = await response.json().catch(() => ({}));
 
-    async function apiRequest(
-        url,
-        options = {}
-    ) {
+    if (!response.ok) {
+      let message = `Request failed: ${response.status}`;
 
-        const response = await fetch(
-            url,
-            {
-                credentials: "include",
+      if (data?.detail) {
+        message = data.detail;
+      } else if (data?.error) {
+        message = data.error;
+      } else if (data && typeof data === "object") {
+        const firstError = Object.values(data)
+          .flat()
+          .find((value) => typeof value === "string");
 
-                headers: {
-                    "Content-Type": "application/json",
-
-                    ...(options.headers || {})
-                },
-
-                ...options
-            }
-        );
-
-
-        let data = null;
-
-        try {
-
-            data = await response.json();
-
-        } catch (error) {
-
-            data = null;
+        if (firstError) {
+          message = firstError;
         }
+      }
 
-
-        if (!response.ok) {
-
-            let message =
-                `Request failed: ${response.status}`;
-
-
-            if (data) {
-
-                if (data.detail) {
-
-                    message = data.detail;
-
-                } else if (
-                    typeof data === "object"
-                ) {
-
-                    message =
-                        Object.values(data)
-                            .flat()
-                            .join(" ");
-                }
-            }
-
-
-            throw new Error(message);
-        }
-
-
-        return data;
+      throw new Error(message);
     }
 
-
-    // =====================================================
-    // GET PROJECT TEST SUITES
-    // =====================================================
-
-    async function fetchSuites() {
-
-        showLoading(true);
-
-        hideEmpty();
-
-        hideError();
-
-
-        try {
-
-            /*
-             * GET
-             * /api/projects/{project_id}/test-suites/
-             */
-
-            const response =
-                await apiRequest(
-                    `/api/projects/${currentProjectId}/test-suites/`
-                );
-
-
-            /*
-             * Support:
-             *
-             * [
-             *   ...
-             * ]
-             *
-             * OR
-             *
-             * {
-             *   count,
-             *   results: [...]
-             * }
-             */
-
-            allSuites =
-                Array.isArray(response)
-                    ? response
-                    : Array.isArray(response?.results)
-                        ? response.results
-                        : [];
-
-
-            filteredSuites =
-                [...allSuites];
-
-
-            renderSuites();
-
-
-        } catch (error) {
-
-            console.error(
-                "Load test suites failed:",
-                error
-            );
-
-
-            showError(
-                error.message
-            );
-
-        } finally {
-
-            showLoading(false);
-
-        }
+    return data;
+  }
+  function normalizeList(data) {
+    if (Array.isArray(data)) {
+      return data;
     }
 
-
-    // =====================================================
-    // RENDER SUITES
-    // =====================================================
-
-    function renderSuites() {
-
-        suiteList.innerHTML = "";
-
-
-        if (!filteredSuites.length) {
-
-            suiteList.classList.add("hidden");
-
-            showEmpty(true);
-
-            return;
-        }
-
-
-        showEmpty(false);
-
-        suiteList.classList.remove("hidden");
-
-
-        filteredSuites.forEach(
-            suite => {
-
-                suiteList.appendChild(
-                    createSuiteElement(
-                        suite
-                    )
-                );
-
-            }
-        );
+    if (Array.isArray(data?.results)) {
+      return data.results;
     }
 
+    return [];
+  }
 
-    // =====================================================
-    // CREATE SUITE CARD
-    // =====================================================
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+  async function loadSuites() {
+    showLoading(true);
+    hideError();
+    try {
+      const data = await apiFetch(`/api/projects/${projectId}/test-suites/`);
+      suites = normalizeList(data);
+      renderSuites();
+    } catch (error) {
+      console.error("Load suites failed:", error);
+      showError(error.message || "Unable to load test suites.");
+    } finally {
+      showLoading(false);
+    }
+  }
+  function renderSuites() {
+    const keyword = (searchSuiteInput?.value || "").trim().toLowerCase();
 
-    function createSuiteElement(
-        suite
-    ) {
+    const visibleSuites = suites.filter((suite) =>
+      String(suite.name || "")
+        .toLowerCase()
+        .includes(keyword),
+    );
 
-        const card =
-            document.createElement("div");
+    suiteList.innerHTML = "";
 
+    if (!visibleSuites.length) {
+      suiteList.classList.add("hidden");
 
-        card.className = `
-            bg-white
-            border
-            border-slate-200
-            rounded-2xl
-            shadow-sm
-            hover:shadow-md
-            transition
-        `;
+      suiteEmpty.classList.remove("hidden");
 
+      return;
+    }
 
-        card.innerHTML = `
+    suiteEmpty.classList.add("hidden");
 
-            <div
-                class="px-5 py-4 flex items-center justify-between gap-4"
-            >
+    suiteList.classList.remove("hidden");
 
-                <!-- LEFT -->
+    visibleSuites.forEach((suite) => {
+      const item = document.createElement("article");
 
-                <div
-                    class="flex items-center gap-4 min-w-0"
-                >
+      const caseCount = Number(
+        suite.test_case_count ??
+          suite.assigned_test_cases?.length ??
+          suite.test_cases_count ??
+          suite.cases_count ??
+          0,
+      );
 
-                    <div
-                        class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0"
-                    >
-
-                        <i class="fa-solid fa-layer-group text-lg"></i>
-
-                    </div>
-
-
-                    <div class="min-w-0">
-
-                        <h3
-                            class="font-semibold text-slate-800 truncate"
-                        >
-                            ${escapeHtml(
-                                suite.name || "Untitled Suite"
-                            )}
-                        </h3>
-
-
-                        <div
-                            class="flex items-center gap-4 mt-1"
-                        >
-
-                            ${
-                                suite.test_cases_count !== undefined
-                                    ? `
-                                        <span class="text-xs text-slate-400">
-
-                                            <i class="fa-solid fa-vials mr-1"></i>
-
-                                            ${suite.test_cases_count}
-                                            Test Cases
-
-                                        </span>
-                                    `
-                                    : `
-                                        <span class="text-xs text-slate-400">
-
-                                            <i class="fa-solid fa-layer-group mr-1"></i>
-
-                                            Test Suite
-
-                                        </span>
-                                    `
-                            }
-
-
-                            ${
-                                suite.priority
-                                    ? `
-                                        <span class="text-xs text-slate-400">
-
-                                            <i class="fa-solid fa-flag mr-1"></i>
-
-                                            ${escapeHtml(
-                                                suite.priority
-                                            )}
-
-                                        </span>
-                                    `
-                                    : ""
-                            }
-
-
-                            ${
-                                suite.test_type
-                                    ? `
-                                        <span class="text-xs text-slate-400">
-
-                                            <i class="fa-solid fa-vial-circle-check mr-1"></i>
-
-                                            ${escapeHtml(
-                                                suite.test_type
-                                            )}
-
-                                        </span>
-                                    `
-                                    : ""
-                            }
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <!-- ACTIONS -->
-
-                <div
-                    class="flex items-center gap-1 shrink-0"
-                >
-
-                    <!-- VIEW -->
-
+      item.className = `border border-slate-200 bg-white rounded-xl px-5 py-4 shadow-sm flex items-center gap-4 hover:border-indigo-300
+                    hover:shadow-md transition`;
+      item.innerHTML = `
+                    <!-- SUITE -->
                     <button
                         type="button"
-                        class="view-suite-btn p-2.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition"
-                        data-id="${suite.id}"
-                        title="View Test Cases"
-                    >
+                        class="suite-open-btn flex min-w-0 flex-1 items-center gap-4 text-left">
+                        <span
+                            class="w-10 h-10 shrink-0 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center"
+                        >
+                            <i class="fa-solid fa-layer-group"></i>
+                        </span>
+                        <span class="min-w-0">
+                            <span
+                                class="block truncate font-semibold text-slate-800"
+                            >
+                                ${escapeHtml(suite.name)}
+                            </span>
+                            <span
+                                class="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500"
+                            >
+                                <span
+                                    class="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-1 font-medium text-emerald-700"
+                                >
+                                    <i class="fa-solid fa-vials"></i>
+                                    ${caseCount}
+                                    Test Cases
+                                </span>
+                            </span>
 
-                        <i class="fa-solid fa-eye"></i>
+                        </span>
 
                     </button>
-
-
-                    ${
-                        canManageSuites
+                    <!-- ACTIONS -->
+                    <div class="flex items-center gap-1">
+                        <button
+                            type="button"
+                            data-testid="testsuite-page-btn-view-suite"
+                            class="suite-view-btn flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600"
+                            title="View Test Cases"
+                        >
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                        ${
+                          canManageSuites
                             ? `
-
-                                <!-- EDIT -->
-
                                 <button
                                     type="button"
-                                    class="edit-suite-btn p-2.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition"
-                                    data-id="${suite.id}"
+                                    data-testid="testsuite-page-btn-edit-suite"
+                                    class="suite-edit-btn flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600"
                                     title="Edit Suite"
                                 >
-
                                     <i class="fa-solid fa-pen"></i>
-
                                 </button>
-
-
-                                <!-- DELETE -->
-
                                 <button
                                     type="button"
-                                    class="delete-suite-btn p-2.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                                    data-id="${suite.id}"
+                                    data-testid="testsuite-page-btn-delete-suite"
+                                    class="suite-delete-btn flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600"
                                     title="Delete Suite"
                                 >
-
                                     <i class="fa-solid fa-trash"></i>
-
                                 </button>
-
                             `
                             : ""
-                    }
+                        }
+                    </div>
 
-                </div>
+                    `;
 
-            </div>
+      item
+        .querySelector(".suite-open-btn")
+        .addEventListener("click", () => openSuiteDetail(suite.id));
 
-        `;
+      item
+        .querySelector(".suite-view-btn")
+        .addEventListener("click", () => openSuiteDetail(suite.id));
 
+      item
+        .querySelector(".suite-edit-btn")
+        ?.addEventListener("click", () => openEditForm(suite));
 
-        return card;
+      item
+        .querySelector(".suite-delete-btn")
+        ?.addEventListener("click", () => openDeleteModal(suite));
+
+      suiteList.appendChild(item);
+    });
+  }
+  function openCreateForm() {
+    if (!canManageSuites) {
+      return;
     }
 
+    editingSuiteId = null;
 
-    // =====================================================
-    // SEARCH
-    // =====================================================
+    suiteForm.reset();
 
-    function searchSuites() {
+    suiteFormTitle.textContent = "Create Test Suite";
 
-        const keyword =
-            searchInput.value
-                .trim()
-                .toLowerCase();
+    saveSuiteBtn.textContent = "Create Suite";
 
+    hideFormError();
 
-        if (!keyword) {
+    suiteFormModal.classList.remove("hidden");
 
-            filteredSuites =
-                [...allSuites];
-
-        } else {
-
-            filteredSuites =
-                allSuites.filter(
-                    suite =>
-                        suite.name
-                            ?.toLowerCase()
-                            .includes(keyword)
-                );
-        }
-
-
-        renderSuites();
+    suiteNameInput.focus();
+  }
+  function openEditForm(suite) {
+    if (!canManageSuites) {
+      return;
     }
 
+    editingSuiteId = suite.id;
 
-    // =====================================================
-    // OPEN CREATE
-    // =====================================================
+    suiteNameInput.value = suite.name || "";
 
-    function openCreateForm() {
+    suiteFormTitle.textContent = "Update Test Suite";
 
-        if (!canManageSuites) {
-            return;
-        }
+    saveSuiteBtn.textContent = "Update Suite";
 
+    hideFormError();
 
-        editingSuiteId = null;
+    suiteFormModal.classList.remove("hidden");
 
+    suiteNameInput.focus();
+  }
+  async function saveSuite(event) {
+    event.preventDefault();
 
-        formTitle.textContent =
-            "Create Test Suite";
-
-
-        saveBtn.textContent =
-            "Create Suite";
-
-
-        suiteNameInput.value = "";
-
-
-        formError.classList.add(
-            "hidden"
-        );
-
-
-        formModal.classList.remove(
-            "hidden"
-        );
-
-
-        setTimeout(
-            () => suiteNameInput.focus(),
-            100
-        );
+    if (!canManageSuites) {
+      return;
     }
 
+    const name = suiteNameInput.value.trim();
 
-    // =====================================================
-    // OPEN EDIT
-    // =====================================================
+    if (!name) {
+      showFormError("Suite name is required.");
 
-    function openEditForm(
-        suiteId
-    ) {
-
-        if (!canManageSuites) {
-            return;
-        }
-
-
-        const suite =
-            allSuites.find(
-                item =>
-                    Number(item.id) ===
-                    Number(suiteId)
-            );
-
-
-        if (!suite) {
-            return;
-        }
-
-
-        editingSuiteId =
-            suite.id;
-
-
-        formTitle.textContent =
-            "Edit Test Suite";
-
-
-        saveBtn.textContent =
-            "Save Changes";
-
-
-        suiteNameInput.value =
-            suite.name || "";
-
-
-        formError.classList.add(
-            "hidden"
-        );
-
-
-        formModal.classList.remove(
-            "hidden"
-        );
-
-
-        setTimeout(
-            () => suiteNameInput.focus(),
-            100
-        );
+      return;
     }
 
+    const editing = Boolean(editingSuiteId);
 
-    // =====================================================
-    // CLOSE FORM
-    // =====================================================
+    saveSuiteBtn.disabled = true;
 
-    function closeForm() {
-
-        formModal.classList.add(
-            "hidden"
-        );
-
-
-        editingSuiteId =
-            null;
-
-
-        suiteNameInput.value = "";
-
-
-        formError.classList.add(
-            "hidden"
-        );
-    }
-
-
-    // =====================================================
-    // SAVE SUITE
-    // =====================================================
-
-    async function saveSuite(
-        event
-    ) {
-
-        event.preventDefault();
-
-
-        if (!canManageSuites) {
-            return;
-        }
-
-
-        const name =
-            suiteNameInput.value.trim();
-
-
-        if (!name) {
-
-            showFormError(
-                "Suite name is required."
-            );
-
-            return;
-        }
-
-
-        saveBtn.disabled = true;
-
-
-        saveBtn.innerHTML = `
+    saveSuiteBtn.innerHTML = `
             <i class="fa-solid fa-spinner fa-spin mr-1"></i>
             Saving...
-        `;
+            `;
 
+    try {
+      if (editing) {
+        await apiFetch(`/api/test-suites/${editingSuiteId}/`, {
+          method: "PATCH",
 
-        try {
+          body: JSON.stringify({
+            name,
+          }),
+        });
 
-            // =================================================
-            // EDIT
-            // =================================================
+        showToast("Test suite updated.");
+      } else {
+        await apiFetch(`/api/projects/${projectId}/test-suites/`, {
+          method: "POST",
 
-            if (editingSuiteId) {
+          body: JSON.stringify({
+            name,
+          }),
+        });
 
-                /*
-                 * PATCH
-                 * /api/test-suites/{id}/
-                 */
+        showToast("Test suite created.");
+      }
 
-                await apiRequest(
-                    `/api/test-suites/${editingSuiteId}/`,
-                    {
-                        method: "PATCH",
+      closeSuiteForm();
 
-                        body: JSON.stringify({
-                            name: name
-                        })
-                    }
-                );
+      await loadSuites();
+    } catch (error) {
+      console.error("Save suite failed:", error);
 
+      showFormError(error.message);
+    } finally {
+      saveSuiteBtn.disabled = false;
 
-                showToast(
-                    "Suite updated successfully."
-                );
-
-
-            }
-
-            // =================================================
-            // CREATE
-            // =================================================
-
-            else {
-
-                /*
-                 * POST
-                 * /api/projects/{project_id}/test-suites/
-                 */
-
-                await apiRequest(
-                    `/api/projects/${currentProjectId}/test-suites/`,
-                    {
-                        method: "POST",
-
-                        body: JSON.stringify({
-                            name: name
-                        })
-                    }
-                );
-
-
-                showToast(
-                    "Suite created successfully."
-                );
-            }
-
-
-            closeForm();
-
-            await fetchSuites();
-
-
-        } catch (error) {
-
-            console.error(
-                "Save suite failed:",
-                error
-            );
-
-
-            showFormError(
-                error.message
-            );
-
-        } finally {
-
-            saveBtn.disabled = false;
-
-
-            saveBtn.textContent =
-                editingSuiteId
-                    ? "Save Changes"
-                    : "Create Suite";
-        }
+      saveSuiteBtn.textContent = editing ? "Update Suite" : "Create Suite";
+    }
+  }
+  async function openSelectCasesModal() {
+    if (!canManageSuites) {
+      return;
+    }
+    if (!projectId || projectId === "null" || projectId === "undefined") {
+      showToast("Please create at least one Test Suite first.", true);
+      return;
     }
 
+    selectedCaseIds = new Set();
 
-    // =====================================================
-    // VIEW SUITE TEST CASES
-    // =====================================================
+    selectCasesModal.classList.remove("hidden");
 
-    async function viewSuite(
-        suiteId
-    ) {
+    selectCasesBody.innerHTML = `
+            <tr>
+                <td
+                    colspan="5"
+                    class="px-4 py-12 text-center">
+                    <i class="fa-solid fa-spinner fa-spin text-xl text-indigo-600"></i>
+                    <p class="mt-3 text-sm text-slate-500">
+                        Loading approved test cases...
+                    </p>
 
-        const suite =
-            allSuites.find(
-                item =>
-                    Number(item.id) ===
-                    Number(suiteId)
-            );
+                </td>
+            </tr>
+            `;
+    populateTargetSuites();
+    try {
+      const data = await apiFetch(
+        `/api/testcases/?project_id=${projectId}&review_status=approved&page_size=1000`,
+      );
+      console.log("TEST CASE API RESPONSE:", data);
+      const rawTestCases = normalizeList(data);
+      console.log("RAW TEST CASES:", rawTestCases);
+      console.log("RAW COUNT:", rawTestCases.length);
+      console.log(
+        "STATUSES:",
+        rawTestCases.map((tc) => ({
+          id: tc.id,
+          case_id: tc.case_id,
+          status: tc.status,
+          review_status: tc.review_status,
+        })),
+      );
 
+      allTestCases = rawTestCases.filter((testCase) => isApproved(testCase));
+      console.log("APPROVED TEST CASES:", allTestCases);
+      console.log("APPROVED COUNT:", allTestCases.length);
+      populateRequirementFilter();
+      applyCaseFilters();
+    } catch (error) {
+      console.error("Load test cases failed:", error);
 
-        if (!suite) {
-            return;
+      selectCasesBody.innerHTML = `
+                <tr>
+                    <td
+                        colspan="5"
+                        class="px-4 py-12 text-center text-rose-600"
+                    >
+                        ${escapeHtml(error.message)}
+                    </td>
+                </tr>
+                `;
+    }
+  }
+  function isApproved(testCase) {
+    const status = String(testCase.review_status ?? testCase.status ?? "")
+      .trim()
+      .toLowerCase();
+
+    return status === "approved";
+  }
+  function populateTargetSuites() {
+    targetSuiteSelect.innerHTML = `
+            <option value="">
+                Select suite
+            </option>
+            `;
+
+    suites.forEach((suite) => {
+      const option = document.createElement("option");
+
+      option.value = suite.id;
+
+      option.textContent = suite.name;
+
+      targetSuiteSelect.appendChild(option);
+    });
+
+    if (suites.length === 1) {
+      targetSuiteSelect.value = suites[0].id;
+    }
+
+    updateAddButton();
+  }
+  function populateRequirementFilter() {
+    const requirements = new Map();
+
+    allTestCases.forEach((testCase) => {
+      const value = getRequirementValue(testCase);
+
+      if (value) {
+        requirements.set(String(value), String(value));
+      }
+    });
+
+    caseRequirementFilter.innerHTML = `
+            <option value="">
+                All
+            </option>
+            `;
+
+    [...requirements.values()].sort().forEach((requirement) => {
+      const option = document.createElement("option");
+
+      option.value = requirement;
+
+      option.textContent = requirement;
+
+      caseRequirementFilter.appendChild(option);
+    });
+  }
+
+  function getRequirementValue(testCase) {
+    if (testCase.requirement_ref) {
+      return testCase.requirement_ref;
+    }
+
+    if (testCase.requirement_id) {
+      return testCase.requirement_id;
+    }
+
+    if (typeof testCase.requirement === "string") {
+      return testCase.requirement;
+    }
+
+    if (typeof testCase.requirement === "number") {
+      return `REQ-${testCase.requirement}`;
+    }
+
+    return "";
+  }
+  function applyCaseFilters() {
+    const keyword = (caseSearchInput.value || "").trim().toLowerCase();
+
+    const priority = casePriorityFilter.value;
+
+    const requirement = caseRequirementFilter.value;
+
+    filteredTestCases = allTestCases.filter((testCase) => {
+      const caseId = String(
+        testCase.case_id || `TC-${testCase.id}`,
+      ).toLowerCase();
+      const title = String(testCase.title || "").toLowerCase();
+      const testPriority = String(testCase.priority || "").toLowerCase();
+      const testRequirement = String(getRequirementValue(testCase));
+      const matchesSearch =
+        !keyword || caseId.includes(keyword) || title.includes(keyword);
+      const matchesPriority =
+        !priority || testPriority === priority.toLowerCase();
+      const matchesRequirement =
+        !requirement || testRequirement === requirement;
+      return matchesSearch && matchesPriority && matchesRequirement;
+    });
+
+    renderCaseRows();
+  }
+  function renderCaseRows() {
+    if (!filteredTestCases.length) {
+      selectCasesBody.innerHTML = `
+                <tr>
+                    <td
+                        colspan="5"
+                        class="px-4 py-12 text-center text-sm text-slate-400"
+                    >
+                        No approved test cases available
+                    </td>
+
+                </tr>
+                `;
+
+      updateSelectAllState();
+
+      updateSelectionCount();
+
+      return;
+    }
+
+    selectCasesBody.innerHTML = filteredTestCases
+      .map((testCase) => {
+        const id = String(testCase.id);
+
+        const targetSuiteId = targetSuiteSelect.value;
+
+        const targetSuiteObj = suites.find(
+          (item) => Number(item.id) === Number(targetSuiteId),
+        );
+
+        const targetAssignedIds = new Set(
+          Array.isArray(targetSuiteObj?.assigned_test_cases)
+            ? targetSuiteObj.assigned_test_cases.map(Number)
+            : [],
+        );
+
+        const alreadyInTarget =
+          targetSuiteId &&
+          (targetAssignedIds.has(Number(testCase.id)) ||
+            Number(testCase.suite) === Number(targetSuiteId));
+
+        const checked = selectedCaseIds.has(id);
+
+        const requirement = getRequirementValue(testCase);
+
+        return `
+                        <tr
+                            class="border-t border-slate-100 hover:bg-slate-50"
+                        >
+                            <td class="px-4 py-3">
+                                <input
+                                    type="checkbox"
+                                    class="case-checkbox rounded border-slate-300"
+                                    data-id="${id}"
+                                    ${checked ? "checked" : ""}
+                                    ${alreadyInTarget ? "disabled" : ""}
+                                />
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="font-mono font-medium text-indigo-600">
+                                    ${escapeHtml(
+                                      testCase.case_id || `TC-${testCase.id}`,
+                                    )}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="font-medium text-slate-800">
+                                    ${escapeHtml(
+                                      testCase.title || "Untitled Test Case",
+                                    )}
+                                </div>
+                                ${
+                                  alreadyInTarget
+                                    ? `
+                                        <span class="mt-1 inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
+
+                                            <i class="fa-solid fa-check"></i>
+
+                                            Already in target suite
+
+                                        </span>
+                                        `
+                                    : ""
+                                }
+
+                            </td>
+                            <td class="px-4 py-3">
+                                <span
+                                    class="inline-flex rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600"
+                                >
+                                    ${escapeHtml(testCase.priority || "medium")}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-xs text-slate-500">
+                                ${escapeHtml(requirement || "—")}
+                            </td>
+                        </tr>
+                        `;
+      })
+      .join("");
+    selectCasesBody.querySelectorAll(".case-checkbox").forEach((checkbox) => {
+      checkbox.addEventListener("change", () => {
+        const id = checkbox.dataset.id;
+        if (checkbox.checked) {
+          selectedCaseIds.add(id);
+        } else {
+          selectedCaseIds.delete(id);
         }
+        updateSelectionCount();
+        updateSelectAllState();
+      });
+    });
+    updateSelectionCount();
+    updateSelectAllState();
+  }
+  // =====================================================
+  // SELECT ALL
+  // =====================================================
 
+  function updateSelectAllState() {
+    const checkboxes = [
+      ...selectCasesBody.querySelectorAll(".case-checkbox:not(:disabled)"),
+    ];
 
-        detailTitle.textContent =
-            suite.name;
+    if (!checkboxes.length) {
+      selectAllCases.checked = false;
 
+      selectAllCases.indeterminate = false;
 
-        detailSubtitle.textContent =
-            "Test cases in this suite";
+      return;
+    }
 
+    const checkedCount = checkboxes.filter(
+      (checkbox) => checkbox.checked,
+    ).length;
 
-        detailContent.innerHTML = `
+    selectAllCases.checked = checkedCount === checkboxes.length;
 
-            <div class="py-10 text-center">
+    selectAllCases.indeterminate =
+      checkedCount > 0 && checkedCount < checkboxes.length;
+  }
 
-                <i
-                    class="fa-solid fa-spinner fa-spin text-xl text-indigo-600"
-                ></i>
+  selectAllCases?.addEventListener("change", () => {
+    const checkboxes = selectCasesBody.querySelectorAll(
+      ".case-checkbox:not(:disabled)",
+    );
 
+    checkboxes.forEach((checkbox) => {
+      checkbox.checked = selectAllCases.checked;
+
+      const id = checkbox.dataset.id;
+
+      if (checkbox.checked) {
+        selectedCaseIds.add(id);
+      } else {
+        selectedCaseIds.delete(id);
+      }
+    });
+
+    updateSelectionCount();
+  });
+  function updateSelectionCount() {
+    selectedCasesCount.textContent = `${selectedCaseIds.size} Cases Selected`;
+
+    updateAddButton();
+  }
+  function updateAddButton() {
+    const hasSuite = Boolean(targetSuiteSelect.value);
+
+    const hasCases = selectedCaseIds.size > 0;
+
+    addSelectedCasesBtn.disabled = !hasSuite || !hasCases;
+  }
+  targetSuiteSelect?.addEventListener("change", () => {
+    selectedCaseIds = new Set();
+
+    renderCaseRows();
+  });
+  caseSearchInput?.addEventListener("input", applyCaseFilters);
+  casePriorityFilter?.addEventListener("change", applyCaseFilters);
+  caseRequirementFilter?.addEventListener("change", applyCaseFilters);
+
+  async function addSelectedCasesToSuite() {
+    const suiteId = targetSuiteSelect.value;
+
+    const caseIds = [...selectedCaseIds];
+
+    if (!suiteId) {
+      showToast("Please select a Target Suite.", true);
+
+      return;
+    }
+
+    if (!caseIds.length) {
+      showToast("Please select at least one Test Case.", true);
+
+      return;
+    }
+
+    addSelectedCasesBtn.disabled = true;
+    addSelectedCasesBtn.innerHTML = `
+            <i class="fa-solid fa-spinner fa-spin mr-1"></i>
+            Adding...
+            `;
+    try {
+      const targetSuite = await apiFetch(`/api/test-suites/${suiteId}/`);
+      const currentAssigned = Array.isArray(targetSuite?.assigned_test_cases)
+        ? targetSuite.assigned_test_cases.map(Number)
+        : [];
+      const newCaseIds = caseIds.map(Number);
+      const updatedAssigned = Array.from(
+        new Set([...currentAssigned, ...newCaseIds]),
+      );
+
+      await apiFetch(`/api/test-suites/${suiteId}/`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          assigned_test_cases: updatedAssigned,
+        }),
+      });
+
+      const suite = suites.find((item) => Number(item.id) === Number(suiteId));
+
+      showToast(
+        `${caseIds.length} Test Case(s) added to "${suite?.name || targetSuite?.name || "Suite"}".`,
+      );
+      closeSelectCasesModal();
+      await loadSuites();
+    } catch (error) {
+      console.error("Add test cases failed:", error);
+      showToast(error.message || "Unable to add selected test cases.", true);
+    } finally {
+      addSelectedCasesBtn.disabled = false;
+      addSelectedCasesBtn.innerHTML = `
+                <i class="fa-solid fa-plus mr-1"></i>
+                Add Selected Cases to Suite
+                `;
+      updateAddButton();
+    }
+  }
+  async function openSuiteDetail(suiteId) {
+    suiteDetailModal.classList.remove("hidden");
+    suiteDetailTitle.textContent = "Loading...";
+    suiteDetailSubtitle.textContent = "Loading test cases...";
+    suiteTestCasesContent.innerHTML = `
+            <div class="py-16 text-center" data-testid="test-suite-detail-loading">
+                <i class="fa-solid fa-spinner fa-spin text-xl text-indigo-600"></i>
                 <p class="mt-3 text-sm text-slate-500">
                     Loading test cases...
                 </p>
 
             </div>
-
-        `;
-
-
-        detailModal.classList.remove(
-            "hidden"
-        );
-
-
-        try {
-
-            /*
-             * Nếu BE TestCase API hỗ trợ:
-             *
-             * GET /api/test-cases/?suite={suiteId}
-             *
-             */
-
-            const response =
-                await apiRequest(
-                    `/api/test-cases/?suite=${suiteId}`
-                );
-
-
-            const testCases =
-                Array.isArray(response)
-                    ? response
-                    : Array.isArray(response?.results)
-                        ? response.results
-                        : [];
-
-
-            renderSuiteTestCases(
-                testCases
-            );
-
-
-        } catch (error) {
-
-            console.error(
-                "Load suite test cases failed:",
-                error
-            );
-
-
-            detailContent.innerHTML = `
-
-                <div class="py-10 text-center">
-
-                    <div
-                        class="w-12 h-12 mx-auto rounded-xl bg-rose-50 flex items-center justify-center"
-                    >
-
-                        <i
-                            class="fa-solid fa-triangle-exclamation text-rose-600"
-                        ></i>
-
-                    </div>
-
-
-                    <h3
-                        class="mt-3 font-semibold text-rose-700"
-                    >
-                        Failed to load test cases
-                    </h3>
-
-
-                    <p
-                        class="mt-1 text-sm text-rose-500"
-                    >
-                        ${escapeHtml(
-                            error.message
-                        )}
-                    </p>
-
-                </div>
-
             `;
-        }
+    try {
+      const suite = await apiFetch(`/api/test-suites/${suiteId}/`);
+
+      const casesData = await apiFetch(
+        `/api/testcases/?project_id=${projectId}&page_size=1000`,
+      );
+      const projectCases = normalizeList(casesData);
+      const assignedIds = new Set(
+        Array.isArray(suite.assigned_test_cases)
+          ? suite.assigned_test_cases.map(Number)
+          : [],
+      );
+      const suiteCases = projectCases.filter(
+        (testCase) =>
+          assignedIds.has(Number(testCase.id)) ||
+          Number(testCase.suite) === Number(suiteId),
+      );
+
+      suiteDetailTitle.textContent = suite.name || "Test Suite";
+      suiteDetailSubtitle.textContent = `${suiteCases.length} Test Case(s) in this suite`;
+      renderSuiteDetail(suiteCases);
+    } catch (error) {
+      suiteTestCasesContent.innerHTML = `
+                <div data-testid="test-suite-detail-error" class="py-12 text-center text-rose-600">
+                    <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+                    <p class="mt-3 text-sm">
+                        ${escapeHtml(error.message)}
+                    </p>
+                </div>
+                `;
     }
-
-
-    // =====================================================
-    // RENDER TEST CASES
-    // =====================================================
-
-    function renderSuiteTestCases(
-        testCases
-    ) {
-
-        if (!testCases.length) {
-
-            detailContent.innerHTML = `
-
-                <div class="py-12 text-center">
-
-                    <div
-                        class="w-14 h-14 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center"
-                    >
-
-                        <i
-                            class="fa-solid fa-vials text-xl text-slate-400"
-                        ></i>
-
+  }
+  function renderSuiteDetail(testCases) {
+    if (!testCases.length) {
+      suiteTestCasesContent.innerHTML = `
+                <div data-testid="test-suite-detail-empty" class="py-16 text-center">
+                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-slate-100">
+                        <i class="fa-solid fa-vials text-xl text-slate-400"></i>
                     </div>
-
-
-                    <h3
-                        class="mt-4 font-semibold text-slate-700"
-                    >
+                    <h3 class="mt-4 font-semibold text-slate-700">
                         No Test Cases
                     </h3>
-
-
-                    <p
-                        class="mt-1 text-sm text-slate-400"
-                    >
+                    <p class="mt-1 text-sm text-slate-400">
                         This suite does not contain any test cases yet.
                     </p>
-
                 </div>
+                `;
 
-            `;
+      return;
+    }
 
-            return;
-        }
-
-
-        detailContent.innerHTML = `
-
-            <div class="mb-4">
-
-                <p class="text-sm font-semibold text-slate-700">
-
-                    ${testCases.length}
-
-                    ${
-                        testCases.length === 1
-                            ? "Test Case"
-                            : "Test Cases"
-                    }
-
-                </p>
-
-            </div>
-
-
-            <div
-                class="border border-slate-200 rounded-xl overflow-hidden"
-            >
-
+    suiteTestCasesContent.innerHTML = `
+            <div class="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                <div class="border-b border-slate-200 px-5 py-4">
+                    <p class="text-sm font-semibold text-slate-800">
+                        ${testCases.length}
+                        ${testCases.length === 1 ? "Test Case" : "Test Cases"}
+                    </p>
+                </div>
                 <div class="overflow-x-auto">
-
-                    <table class="w-full text-sm">
-
-                        <thead
-                            class="bg-slate-50 border-b border-slate-200"
-                        >
-
+                    <table data-testid="test-suite-detail-table-cases" class="w-full text-sm">
+                        <thead class="bg-slate-50">
                             <tr>
-
-                                <th
-                                    class="px-4 py-3 text-left font-semibold text-slate-600"
-                                >
-                                    ID
+                                <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-slate-500">
+                                    Case ID
                                 </th>
-
-
-                                <th
-                                    class="px-4 py-3 text-left font-semibold text-slate-600"
-                                >
+                                <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-slate-500">
                                     Title
                                 </th>
-
-
-                                <th
-                                    class="px-4 py-3 text-left font-semibold text-slate-600"
-                                >
+                                <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-slate-500">
                                     Priority
                                 </th>
-
-
-                                <th
-                                    class="px-4 py-3 text-left font-semibold text-slate-600"
-                                >
-                                    Status
+                                <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-slate-500">
+                                    Requirement
                                 </th>
-
-
-                                <th
-                                    class="px-4 py-3 text-left font-semibold text-slate-600"
-                                >
-                                    Source
-                                </th>
-
                             </tr>
-
-                        </thead>
-
-
+                        </thead
                         <tbody>
-
-                            ${testCases.map(
-                                testCase => `
-
-                                    <tr
-                                        class="border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                                    >
-
-                                        <td
-                                            class="px-4 py-3"
-                                        >
-
-                                            <span
-                                                class="font-mono font-semibold text-indigo-600"
-                                            >
-
-                                                ${escapeHtml(
-                                                    testCase.case_id ||
-                                                    `TC-${testCase.id}`
-                                                )}
-
-                                            </span>
-
-                                        </td>
-
-
-                                        <td
-                                            class="px-4 py-3"
-                                        >
-
-                                            <span
-                                                class="font-medium text-slate-800"
-                                            >
-
-                                                ${escapeHtml(
-                                                    testCase.title ||
-                                                    "Untitled Test Case"
-                                                )}
-
-                                            </span>
-
-                                        </td>
-
-
-                                        <td
-                                            class="px-4 py-3"
-                                        >
-
-                                            <span
-                                                class="inline-flex px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-medium"
-                                            >
-
-                                                ${escapeHtml(
-                                                    testCase.priority ||
-                                                    "medium"
-                                                )}
-
-                                            </span>
-
-                                        </td>
-
-
-                                        <td
-                                            class="px-4 py-3"
-                                        >
-
-                                            <span
-                                                class="inline-flex px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-medium"
-                                            >
-
-                                                ${escapeHtml(
-                                                    testCase.review_status ||
-                                                    testCase.status ||
-                                                    "draft"
-                                                )}
-
-                                            </span>
-
-                                        </td>
-
-
-                                        <td
-                                            class="px-4 py-3"
-                                        >
-
-                                            ${
-                                                testCase.source === "ai"
-                                                    ? `
-                                                        <span
-                                                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-violet-50 text-violet-600 text-xs font-medium"
-                                                        >
-
-                                                            <i
-                                                                class="fa-solid fa-wand-magic-sparkles"
-                                                            ></i>
-
-                                                            AI
-
-                                                        </span>
-                                                    `
-                                                    : `
-                                                        <span
-                                                            class="text-xs text-slate-500"
-                                                        >
-                                                            Manual
-                                                        </span>
-                                                    `
-                                            }
-
-                                        </td>
-
-                                    </tr>
-
-                                `
-                            ).join("")}
-
+                            ${testCases
+                              .map(
+                                (testCase) =>
+                                  `
+                                            <tr class="border-t border-slate-100 hover:bg-slate-50">
+                                                <td class="px-5 py-4">
+                                                    <span class="font-mono font-medium text-indigo-600">
+                                                        ${escapeHtml(
+                                                          testCase.case_id ||
+                                                            `TC-${testCase.id}`,
+                                                        )}
+                                                    </span>
+                                                </td>
+                                                <td class="px-5 py-4">
+                                                    <span class="font-medium text-slate-800">
+                                                        ${escapeHtml(
+                                                          testCase.title ||
+                                                            "Untitled Test Case",
+                                                        )}
+                                                    </span>
+                                                </td>
+                                                <td class="px-5 py-4">
+                                                    <span class="inline-flex rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                                                        ${escapeHtml(
+                                                          testCase.priority ||
+                                                            "medium",
+                                                        )}
+                                                    </span>
+                                                </td>
+                                                <td class="px-5 py-4 text-xs text-slate-500">
+                                                    ${escapeHtml(
+                                                      getRequirementValue(
+                                                        testCase,
+                                                      ) || "—",
+                                                    )}
+                                                </td>
+                                            </tr>
+                                            `,
+                              )
+                              .join("")}
                         </tbody>
-
                     </table>
-
                 </div>
-
             </div>
-
-        `;
+            `;
+  }
+  function openDeleteModal(suite) {
+    if (!canManageSuites) {
+      return;
     }
-
-
-    // =====================================================
-    // DELETE MODAL
-    // =====================================================
-
-    function openDeleteModal(
-        suiteId
-    ) {
-
-        if (!canManageSuites) {
-            return;
-        }
-
-
-        const suite =
-            allSuites.find(
-                item =>
-                    Number(item.id) ===
-                    Number(suiteId)
-            );
-
-
-        if (!suite) {
-            return;
-        }
-
-
-        deletingSuiteId =
-            suite.id;
-
-
-        deleteMessage.textContent =
-            `Are you sure you want to delete "${suite.name}"?`;
-
-
-        deleteModal.classList.remove(
-            "hidden"
-        );
+    deletingSuiteId = suite.id;
+    deleteSuiteMessage.textContent = `Delete "${suite.name}"? The test cases will remain in the project.`;
+    deleteSuiteModal.classList.remove("hidden");
+  }
+  async function confirmDelete() {
+    if (!canManageSuites || !deletingSuiteId) {
+      return;
     }
-
-
-    // =====================================================
-    // CONFIRM DELETE
-    // =====================================================
-
-    async function confirmDelete() {
-
-        if (
-            !canManageSuites ||
-            !deletingSuiteId
-        ) {
-
-            return;
-        }
-
-
-        confirmDeleteBtn.disabled =
-            true;
-
-
-        confirmDeleteBtn.innerHTML = `
+    confirmDeleteSuiteBtn.disabled = true;
+    confirmDeleteSuiteBtn.innerHTML = `
             <i class="fa-solid fa-spinner fa-spin mr-1"></i>
             Deleting...
-        `;
-
-
-        try {
-
-            /*
-             * DELETE
-             * /api/test-suites/{id}/
-             */
-
-            await apiRequest(
-                `/api/test-suites/${deletingSuiteId}/`,
-                {
-                    method: "DELETE"
-                }
-            );
-
-
-            showToast(
-                "Suite deleted successfully."
-            );
-
-
-            closeDeleteModal();
-
-
-            await fetchSuites();
-
-
-        } catch (error) {
-
-            console.error(
-                "Delete suite failed:",
-                error
-            );
-
-
-            showToast(
-                error.message,
-                true
-            );
-
-
-        } finally {
-
-            confirmDeleteBtn.disabled =
-                false;
-
-
-            confirmDeleteBtn.textContent =
-                "Delete";
-        }
+            `;
+    try {
+      await apiFetch(`/api/test-suites/${deletingSuiteId}/`, {
+        method: "DELETE",
+      });
+      showToast("Test suite deleted.");
+      closeDeleteModal();
+      await loadSuites();
+    } catch (error) {
+      console.error("Delete suite failed:", error);
+      showToast(error.message || "Unable to delete suite.", true);
+    } finally {
+      confirmDeleteSuiteBtn.disabled = false;
+      confirmDeleteSuiteBtn.textContent = "Delete Suite";
     }
+  }
+  function closeSuiteForm() {
+    suiteFormModal.classList.add("hidden");
+    editingSuiteId = null;
+    suiteForm.reset();
+    hideFormError();
+  }
+  function closeSelectCasesModal() {
+    selectCasesModal.classList.add("hidden");
 
+    selectedCaseIds = new Set();
 
-    // =====================================================
-    // CLOSE DELETE
-    // =====================================================
+    updateSelectionCount();
+  }
 
-    function closeDeleteModal() {
+  function closeSuiteDetail() {
+    suiteDetailModal.classList.add("hidden");
+  }
 
-        deleteModal.classList.add(
-            "hidden"
-        );
+  function closeDeleteModal() {
+    deleteSuiteModal.classList.add("hidden");
 
+    deletingSuiteId = null;
+  }
+  function showError(message) {
+    suiteErrorMessage.textContent = message;
+    suiteError.classList.remove("hidden");
+  }
+  function hideError() {
+    suiteError.classList.add("hidden");
+  }
+  function showLoading(value) {
+    suiteLoading.classList.toggle("hidden", !value);
+  }
+  function showFormError(message) {
+    suiteFormError.textContent = message;
+    suiteFormError.classList.remove("hidden");
+  }
 
-        deletingSuiteId =
-            null;
+  function hideFormError() {
+    suiteFormError.classList.add("hidden");
+  }
+  function showToast(message, isError = false) {
+    if (!suiteToast) {
+      return;
     }
-
-
-    // =====================================================
-    // FORM ERROR
-    // =====================================================
-
-    function showFormError(
-        message
-    ) {
-
-        formError.textContent =
-            message;
-
-
-        formError.classList.remove(
-            "hidden"
-        );
-    }
-
-
-    // =====================================================
-    // ERROR
-    // =====================================================
-
-    function showError(
-        message
-    ) {
-
-        suiteErrorMessage.textContent =
-            message;
-
-
-        suiteError.classList.remove(
-            "hidden"
-        );
-
-
-        suiteList.classList.add(
-            "hidden"
-        );
-    }
-
-
-    function hideError() {
-
-        suiteError.classList.add(
-            "hidden"
-        );
-    }
-
-
-    // =====================================================
-    // TOAST
-    // =====================================================
-
-    function showToast(
-        message,
-        isError = false
-    ) {
-
-        const toast =
-            document.getElementById(
-                "suiteToast"
-            );
-
-
-        toast.textContent =
-            message;
-
-
-        toast.className = `
+    suiteToast.textContent = message;
+    suiteToast.className = `
             fixed
-            right-6
             bottom-6
+            right-6
             z-[70]
+            rounded-lg
             px-5
             py-3
-            rounded-xl
-            shadow-lg
-            text-white
             text-sm
-            ${isError
-                ? "bg-rose-600"
-                : "bg-slate-900"}
-        `;
+            text-white
+            shadow-lg
+            ${isError ? "bg-rose-600" : "bg-slate-900"}
+            `;
+    suiteToast.classList.remove("hidden");
+    setTimeout(() => {
+      suiteToast.classList.add("hidden");
+    }, 3500);
+  }
+  createSuiteBtn?.addEventListener("click", openCreateForm);
+  emptyCreateSuiteBtn?.addEventListener("click", openCreateForm);
+  selectTestCasesBtn?.addEventListener("click", openSelectCasesModal);
+  refreshSuitesBtn?.addEventListener("click", loadSuites);
+  searchSuiteInput?.addEventListener("input", renderSuites);
+  suiteForm?.addEventListener("submit", saveSuite);
+  closeSuiteFormBtn?.addEventListener("click", closeSuiteForm);
+  cancelSuiteFormBtn?.addEventListener("click", closeSuiteForm);
+  closeSelectCasesBtn?.addEventListener("click", closeSelectCasesModal);
+  cancelSelectCasesBtn?.addEventListener("click", closeSelectCasesModal);
+  addSelectedCasesBtn?.addEventListener("click", addSelectedCasesToSuite);
+  closeSuiteDetailBtn?.addEventListener("click", closeSuiteDetail);
+  cancelDeleteSuiteBtn?.addEventListener("click", closeDeleteModal);
+  confirmDeleteSuiteBtn?.addEventListener("click", confirmDelete);
 
-
-        toast.classList.remove(
-            "hidden"
-        );
-
-
-        setTimeout(
-            () => {
-
-                toast.classList.add(
-                    "hidden"
-                );
-
-            },
-            3000
-        );
+  suiteFormModal?.addEventListener("click", (event) => {
+    if (event.target === suiteFormModal) {
+      closeSuiteForm();
     }
+  });
 
-
-    // =====================================================
-    // LOADING
-    // =====================================================
-
-    function showLoading(
-        loading
-    ) {
-
-        if (loading) {
-
-            suiteLoading.classList.remove(
-                "hidden"
-            );
-
-            suiteList.classList.add(
-                "hidden"
-            );
-
-        } else {
-
-            suiteLoading.classList.add(
-                "hidden"
-            );
-        }
+  selectCasesModal?.addEventListener("click", (event) => {
+    if (event.target === selectCasesModal) {
+      closeSelectCasesModal();
     }
+  });
 
-
-    // =====================================================
-    // EMPTY
-    // =====================================================
-
-    function showEmpty(
-        show
-    ) {
-
-        if (show) {
-
-            suiteEmpty.classList.remove(
-                "hidden"
-            );
-
-        } else {
-
-            suiteEmpty.classList.add(
-                "hidden"
-            );
-        }
+  suiteDetailModal?.addEventListener("click", (event) => {
+    if (event.target === suiteDetailModal) {
+      closeSuiteDetail();
     }
+  });
 
-
-    function hideEmpty() {
-
-        showEmpty(false);
+  deleteSuiteModal?.addEventListener("click", (event) => {
+    if (event.target === deleteSuiteModal) {
+      closeDeleteModal();
     }
-
-
-    // =====================================================
-    // ESCAPE HTML
-    // =====================================================
-
-    function escapeHtml(
-        value
-    ) {
-
-        if (
-            value === null ||
-            value === undefined
-        ) {
-
-            return "";
-        }
-
-
-        return String(value)
-            .replaceAll(
-                "&",
-                "&amp;"
-            )
-            .replaceAll(
-                "<",
-                "&lt;"
-            )
-            .replaceAll(
-                ">",
-                "&gt;"
-            )
-            .replaceAll(
-                '"',
-                "&quot;"
-            )
-            .replaceAll(
-                "'",
-                "&#039;"
-            );
-    }
-
-
-    // =====================================================
-    // EVENTS
-    // =====================================================
-
-    if (createBtn) {
-
-        createBtn.addEventListener(
-            "click",
-            openCreateForm
-        );
-    }
-
-
-    if (emptyCreateBtn) {
-
-        emptyCreateBtn.addEventListener(
-            "click",
-            openCreateForm
-        );
-    }
-
-
-    if (refreshBtn) {
-
-        refreshBtn.addEventListener(
-            "click",
-            fetchSuites
-        );
-    }
-
-
-    if (searchInput) {
-
-        searchInput.addEventListener(
-            "input",
-            searchSuites
-        );
-    }
-
-
-    if (form) {
-
-        form.addEventListener(
-            "submit",
-            saveSuite
-        );
-    }
-
-
-    if (closeFormBtn) {
-
-        closeFormBtn.addEventListener(
-            "click",
-            closeForm
-        );
-    }
-
-
-    if (cancelFormBtn) {
-
-        cancelFormBtn.addEventListener(
-            "click",
-            closeForm
-        );
-    }
-
-
-    if (closeDetailBtn) {
-
-        closeDetailBtn.addEventListener(
-            "click",
-            () => {
-
-                detailModal.classList.add(
-                    "hidden"
-                );
-
-            }
-        );
-    }
-
-
-    if (cancelDeleteBtn) {
-
-        cancelDeleteBtn.addEventListener(
-            "click",
-            closeDeleteModal
-        );
-    }
-
-
-    if (confirmDeleteBtn) {
-
-        confirmDeleteBtn.addEventListener(
-            "click",
-            confirmDelete
-        );
-    }
-
-
-    // =====================================================
-    // EVENT DELEGATION
-    // =====================================================
-
-    suiteList.addEventListener(
-        "click",
-        function (event) {
-
-            const viewBtn =
-                event.target.closest(
-                    ".view-suite-btn"
-                );
-
-
-            const editBtn =
-                event.target.closest(
-                    ".edit-suite-btn"
-                );
-
-
-            const deleteBtn =
-                event.target.closest(
-                    ".delete-suite-btn"
-                );
-
-
-            if (viewBtn) {
-
-                viewSuite(
-                    viewBtn.dataset.id
-                );
-
-                return;
-            }
-
-
-            if (editBtn) {
-
-                openEditForm(
-                    editBtn.dataset.id
-                );
-
-                return;
-            }
-
-
-            if (deleteBtn) {
-
-                openDeleteModal(
-                    deleteBtn.dataset.id
-                );
-
-                return;
-            }
-
-        }
-    );
-
-
-    // =====================================================
-    // CLOSE MODALS OUTSIDE
-    // =====================================================
-
-    formModal.addEventListener(
-        "click",
-        function (event) {
-
-            if (
-                event.target ===
-                formModal
-            ) {
-
-                closeForm();
-            }
-        }
-    );
-
-
-    detailModal.addEventListener(
-        "click",
-        function (event) {
-
-            if (
-                event.target ===
-                detailModal
-            ) {
-
-                detailModal.classList.add(
-                    "hidden"
-                );
-            }
-        }
-    );
-
-
-    deleteModal.addEventListener(
-        "click",
-        function (event) {
-
-            if (
-                event.target ===
-                deleteModal
-            ) {
-
-                closeDeleteModal();
-            }
-        }
-    );
-    fetchSuites();
-
+  });
+  loadSuites();
 });

@@ -53,6 +53,10 @@ class RequirementSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class TestSuiteCreateSerializer(serializers.ModelSerializer):
+    assigned_test_cases = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=TestCase.objects.all(), required=False
+    )
+
     class Meta:
         model = TestSuite
         fields = [
@@ -63,6 +67,7 @@ class TestSuiteCreateSerializer(serializers.ModelSerializer):
             "test_type",
             "estimate_time",
             "requirement_ref",
+            "assigned_test_cases",
         ]
         read_only_fields = ["id"]
 
@@ -72,7 +77,9 @@ class TestSuiteListSerializer(serializers.ModelSerializer):
     project_name = serializers.CharField(source="project.name", read_only=True)
     created_by = serializers.CharField(source="created_by.username", read_only=True)
     test_case_count = serializers.SerializerMethodField()
-
+    assigned_test_cases = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=TestCase.objects.all(), required=False
+    )
     class Meta:
         model = TestSuite
         fields = [
@@ -89,10 +96,22 @@ class TestSuiteListSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "test_case_count",
+            "assigned_test_cases",
         ]
 
+    def validate_assigned_test_cases(self, test_cases):
+        instance = getattr(self, "instance", None)
+        project_id = instance.project_id if instance else None
+        if project_id and test_cases:
+            for tc in test_cases:
+                if tc.suite and tc.suite.project_id != project_id:
+                    raise serializers.ValidationError(
+                        f"Test case TC#{tc.id} không thuộc Project của Test Suite này."
+                    )
+        return test_cases
+
     def get_test_case_count(self, obj):
-        return obj.test_cases.count()
+        return obj.assigned_test_cases.count()
 
 
 class TestSuiteDetailSerializer(serializers.ModelSerializer):
@@ -100,6 +119,9 @@ class TestSuiteDetailSerializer(serializers.ModelSerializer):
     project_name = serializers.CharField(source="project.name", read_only=True)
     created_by = serializers.CharField(source="created_by.username", read_only=True)
     test_case_count = serializers.SerializerMethodField()
+    assigned_test_cases = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=TestCase.objects.all(), required=False
+    )
 
     class Meta:
         model = TestSuite
@@ -117,10 +139,22 @@ class TestSuiteDetailSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "test_case_count",
+            "assigned_test_cases",
         ]
 
+    def validate_assigned_test_cases(self, test_cases):
+        instance = getattr(self, "instance", None)
+        project_id = instance.project_id if instance else None
+        if project_id and test_cases:
+            for tc in test_cases:
+                if tc.suite and tc.suite.project_id != project_id:
+                    raise serializers.ValidationError(
+                        f"Test case TC#{tc.id} không thuộc Project của Test Suite này."
+                    )
+        return test_cases
+
     def get_test_case_count(self, obj):
-        return obj.test_cases.count()
+        return obj.assigned_test_cases.count()
 
 class TestStepSerializer(serializers.ModelSerializer):
     class Meta:
@@ -130,6 +164,10 @@ class TestStepSerializer(serializers.ModelSerializer):
 
 class TestCaseSerializer(serializers.ModelSerializer):
     steps = TestStepSerializer(many=True, required=False)
+    suite = serializers.PrimaryKeyRelatedField(
+        queryset=TestSuite.objects.select_related("project").all(),
+        required=False,
+    )
 
     class Meta:
         model = TestCase
@@ -148,7 +186,23 @@ class TestCaseSerializer(serializers.ModelSerializer):
             "steps",
         ]
 
-        read_only_fields = ["id", "suite"]
+        read_only_fields = ["id"]
+
+    def validate_suite(self, suite):
+        if self.instance and suite.project_id != self.instance.suite.project_id:
+            raise serializers.ValidationError(
+                "A test case can only be moved to a suite in the same project."
+            )
+
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if user and user.is_authenticated and not user.is_superuser:
+            if not user.tenant_id or suite.project.tenant_id != user.tenant_id:
+                raise serializers.ValidationError(
+                    "You do not have access to this test suite."
+                )
+
+        return suite
 
     def create(self, validated_data):
         steps_data = validated_data.pop("steps", [])
