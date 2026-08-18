@@ -86,12 +86,22 @@ class TestSuiteViewSet(viewsets.ModelViewSet):
         return TestSuiteListSerializer
 
     def get_queryset(self):
-        project_id = self.kwargs.get("project_id")
+        queryset = TestSuite.objects.select_related("project").all()
+        user = self.request.user
+
+        if not user.is_superuser:
+            tenant = getattr(self.request, "tenant", None) or getattr(user, "tenant", None)
+            if tenant:
+                queryset = queryset.filter(project__tenant=tenant)
+            elif getattr(user, "tenant_id", None):
+                queryset = queryset.filter(project__tenant_id=user.tenant_id)
+
+        project_id = self.kwargs.get("project_id") or self.request.query_params.get("project_id")
 
         if project_id:
-            return TestSuite.objects.filter(project_id=project_id)
+            return queryset.filter(project_id=project_id)
 
-        return TestSuite.objects.all()
+        return queryset
 
     def perform_create(self, serializer):
         project = get_object_or_404(Project, pk=self.kwargs["project_id"])

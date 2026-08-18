@@ -107,6 +107,13 @@ class TestSuite(models.Model):
         db_table = "test_suite"
         unique_together = ("project", "name")
 
+    assigned_test_cases = models.ManyToManyField(
+        'TestCase',
+        related_name="assigned_suites",
+        blank=True,
+        verbose_name="Test Cases"
+    )
+
 class TestCase(models.Model):
     PRIORITY_CHOICES = (("critical", "Critical"), ("high", "High"), ("medium", "Medium"), ("low", "Low"),)
     REVIEW_STATUS_CHOICES = (("draft", "Draft"), ("approved", "Approved"),)
