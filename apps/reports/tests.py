@@ -46,3 +46,16 @@ class ReportApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["filters"]["period"], "this_month")
+
+    def test_export_csv_returns_content_disposition_and_ok(self):
+        response = self.client.get(f"/api/reports/export/csv/?project_id={self.project.id}&period=last_7_days")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response["Content-Type"], "text/csv; charset=utf-8-sig")
+        self.assertTrue(response["Content-Disposition"].startswith('attachment; filename="report_portal.csv"'))
+        content = response.content.decode('utf-8-sig')
+        self.assertIn("PROJECT REPORT & ANALYTICS", content)
+        self.assertIn("TEST EXECUTION SUMMARY", content)
+        self.assertIn("BUG STATUS SUMMARY", content)
+        self.assertIn("DEFECT SEVERITY BREAKDOWN", content)
+        self.assertIn("DAILY DEFECT TREND", content)
+

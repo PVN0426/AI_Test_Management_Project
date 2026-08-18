@@ -44,7 +44,7 @@ urlpatterns = [
     path('projects/', TemplateView.as_view(template_name='projects/project_list.html'), name='project_list'),
     path('projects/<int:project_id>/requirements/', TemplateView.as_view(template_name='requirements/requirements_list.html'), name='project_requirements'),
     path('projects/<int:project_id>/test-cases/', TemplateView.as_view(template_name='testcases/testcase_list.html'),name='project_test_cases'),
-    
+    path('projects/<int:project_id>/reports/', TemplateView.as_view(template_name='reports/reports_list.html'), name='project_reports'),
 ]
 
 if settings.DEBUG:
