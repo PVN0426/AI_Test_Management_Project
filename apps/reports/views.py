@@ -1,7 +1,9 @@
+import csv
 from datetime import timedelta
 
 from django.db.models import Count, Q
 from django.db.models.functions import TruncDate
+from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -140,3 +142,113 @@ class ReportSummaryAPIView(ReportBaseAPIView):
             "defect_severity": severity,
             "defect_trend": defect_trend,
         })
+
+
+class ReportExportCSVView(ReportBaseAPIView):
+    """Export summary metrics as a CSV file."""
+
+    def get(self, request):
+        projects, date_range, error = self._filters()
+        if error:
+            return error
+        start_date, end_date = date_range
+        project_ids = projects.values("id")
+
+        # Determine the project name
+        project_name = "All Projects"
+        if len(projects) == 1:
+            project_name = projects[0].name
+
+        # Query summary metrics
+        test_cases = TestCase.objects.filter(
+            suite__project__in=project_ids,
+            updated_at__date__range=date_range,
+        )
+        test_counts = test_cases.aggregate(
+            total=Count("id"),
+            passed=Count("id", filter=Q(test_result="passed")),
+            failed=Count("id", filter=Q(test_result="failed")),
+            not_run=Count("id", filter=Q(test_result="not_run")),
+        )
+        untested = test_counts["not_run"] or 0
+        total_tests = test_counts["total"] or 0
+        passed = test_counts["passed"] or 0
+        failed = test_counts["failed"] or 0
+
+        bugs = Bug.objects.filter(project__in=project_ids, updated_at__date__range=date_range)
+        bug_status = bugs.aggregate(
+            open=Count("id", filter=Q(status="open")),
+            resolved=Count("id", filter=Q(status="resolved")),
+        )
+        open_bugs = bug_status["open"] or 0
+        resolved_bugs = bug_status["resolved"] or 0
+
+        severity = bugs.aggregate(
+            critical=Count("id", filter=Q(severity="critical")),
+            high=Count("id", filter=Q(severity="high")),
+            medium=Count("id", filter=Q(severity="medium")),
+            low=Count("id", filter=Q(severity="low")),
+        )
+
+        trend_by_day = {
+            item["day"].isoformat(): {"open": item["open"], "resolved": item["resolved"]}
+            for item in bugs.annotate(day=TruncDate("updated_at"))
+            .values("day")
+            .annotate(
+                open=Count("id", filter=Q(status="open")),
+                resolved=Count("id", filter=Q(status="resolved")),
+            )
+        }
+
+        # Create the CSV response
+        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+        filename = f'report_{project_name.lower().replace(" ", "_")}.csv'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        writer = csv.writer(response)
+        
+        # Metadata
+        writer.writerow(["PROJECT REPORT & ANALYTICS"])
+        writer.writerow(["Project Name", project_name])
+        writer.writerow(["Period", request.query_params.get("period", "this_month")])
+        writer.writerow(["Start Date", start_date.isoformat()])
+        writer.writerow(["End Date", end_date.isoformat()])
+        writer.writerow([])
+
+        # Test Execution Summary
+        writer.writerow(["TEST EXECUTION SUMMARY"])
+        writer.writerow(["Metric", "Count"])
+        writer.writerow(["Total Test Cases", total_tests])
+        writer.writerow(["Passed", passed])
+        writer.writerow(["Failed", failed])
+        writer.writerow(["Untested", untested])
+        writer.writerow([])
+
+        # Bug Status Summary
+        writer.writerow(["BUG STATUS SUMMARY"])
+        writer.writerow(["Metric", "Count"])
+        writer.writerow(["Open Bugs", open_bugs])
+        writer.writerow(["Resolved Bugs", resolved_bugs])
+        writer.writerow([])
+
+        # Defect Severity Breakdown
+        writer.writerow(["DEFECT SEVERITY BREAKDOWN"])
+        writer.writerow(["Severity", "Count"])
+        writer.writerow(["Critical", severity["critical"] or 0])
+        writer.writerow(["High", severity["high"] or 0])
+        writer.writerow(["Medium", severity["medium"] or 0])
+        writer.writerow(["Low", severity["low"] or 0])
+        writer.writerow([])
+
+        # Daily Trend Table
+        writer.writerow(["DAILY DEFECT TREND"])
+        writer.writerow(["Date", "Opened Bugs", "Resolved Bugs"])
+        current_day = start_date
+        while current_day <= end_date:
+            day = current_day.isoformat()
+            trend = trend_by_day.get(day, {"open": 0, "resolved": 0})
+            writer.writerow([day, trend["open"], trend["resolved"]])
+            current_day += timedelta(days=1)
+
+        return response
+
