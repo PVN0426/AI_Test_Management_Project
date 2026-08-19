@@ -53,6 +53,7 @@ urlpatterns = [
         ),
         name='project_test_suites'
     ),
+    path('projects/<int:project_id>/bugs/', TemplateView.as_view(template_name='bugs/bug_list.html'), name='project_bugs'),
 ]
 
 if settings.DEBUG:
