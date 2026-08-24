@@ -146,3 +146,15 @@ http://127.0.0.1:8000/
 ## 10. Hỗ trợ
 
 Nếu cần trợ giúp thêm, liên hệ team trưởng hoặc đọc thêm tài liệu Django: https://docs.djangoproject.com/en/5.2/
+
+Cách để đăng nhập tài khoản 
+Truy cập link deploy: https://ai-test-management-project.onrender.com
+
+Để đăng Tài khoản dev:
+admin
+admin@gmail.com
+admin123456@
+Để đăng Tài khoản qc:
+qa_tester01
+Password123@
+
